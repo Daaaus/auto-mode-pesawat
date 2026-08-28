@@ -1,6 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.AutoAirplane" parent="Theme.Material3.DayNight">
-        <item name="colorPrimary">#1565C0</item>
+    <!--
+      Tema gelap tetap (bukan DayNight): desain ini sengaja dibangun di atas
+      palet gelap warm-neutral dengan aksen terracotta. Memakai Dark.NoActionBar
+      sebagai dasar lalu menimpa peran warna Material3 dengan token milik kita.
+    -->
+    <style name="Theme.AutoAirplane" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Aksen -->
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorOnPrimary">@color/on_accent</item>
+        <item name="colorPrimaryContainer">@color/accent_dim</item>
+        <item name="colorOnPrimaryContainer">@color/text_primary</item>
+
+        <item name="colorSecondary">@color/text_secondary</item>
+        <item name="colorOnSecondary">@color/bg</item>
+        <item name="colorSecondaryContainer">@color/surface_higher</item>
+        <item name="colorOnSecondaryContainer">@color/text_primary</item>
+
+        <!-- Permukaan -->
+        <item name="android:colorBackground">@color/bg</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorSurfaceVariant">@color/surface_high</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_high</item>
+        <item name="colorSurfaceContainerHighest">@color/surface_higher</item>
+
+        <item name="colorOutline">@color/outline</item>
+        <item name="colorOutlineVariant">@color/outline_soft</item>
+
+        <!-- Bilah sistem menyatu dengan latar -->
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- Switch & kontrol memakai aksen -->
+        <item name="colorControlActivated">@color/accent</item>
+
+        <!-- Konsistensi bentuk -->
+        <item name="shapeAppearanceMediumComponent">@style/Shape.AutoAir.Medium</item>
+        <item name="shapeAppearanceSmallComponent">@style/Shape.AutoAir.Small</item>
+    </style>
+
+    <style name="Shape.AutoAir.Medium" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">14dp</item>
+    </style>
+
+    <style name="Shape.AutoAir.Small" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">10dp</item>
     </style>
 </resources>

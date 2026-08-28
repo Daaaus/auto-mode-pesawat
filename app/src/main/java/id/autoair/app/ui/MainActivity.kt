@@ -10,9 +10,13 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import android.text.Spannable
+import android.text.SpannableStringBuilder
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -53,10 +57,15 @@ class MainActivity : AppCompatActivity() {
 
         runCatching { Shizuku.addRequestPermissionResultListener(permListener) }
 
+        b.tvVersion.text = "v${appVersion()}"
         bindButtons()
         observeState()
         requestNotificationPermission()
     }
+
+    private fun appVersion(): String = runCatching {
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
+    }.getOrDefault("?")
 
     override fun onDestroy() {
         runCatching { Shizuku.removeRequestPermissionResultListener(permListener) }
@@ -211,9 +220,7 @@ class MainActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     Logger.lines.collect { lines ->
-                        b.tvLog.text =
-                            if (lines.isEmpty()) "Belum ada aktivitas."
-                            else lines.takeLast(80).joinToString("\n")
+                        renderLog(lines)
                         b.scrollLog.post { b.scrollLog.fullScroll(View.FOCUS_DOWN) }
                     }
                 }
@@ -223,19 +230,61 @@ class MainActivity : AppCompatActivity() {
                         b.tvStatusDetail.text = buildDetail(st)
                         b.tvTotalRefresh.text = config.totalRefresh.toString()
                         b.tvLastRefresh.text = st.lastRefresh ?: "—"
-                        b.dotStatus.setBackgroundResource(
-                            when {
-                                !config.enabled -> R.drawable.dot_grey
-                                st.waitingForShizuku -> R.drawable.dot_amber
-                                st.healthy == true -> R.drawable.dot_green
-                                st.healthy == false -> R.drawable.dot_red
-                                else -> R.drawable.dot_grey
-                            }
-                        )
+                        b.pulseStatus.setMode(pulseModeFor(st))
                     }
                 }
             }
         }
+    }
+
+    private fun pulseModeFor(st: MonitorState.Snapshot): StatusPulseView.Mode = when {
+        !config.enabled -> StatusPulseView.Mode.OFF
+        st.waitingForShizuku -> StatusPulseView.Mode.WARN
+        st.healthy == true -> StatusPulseView.Mode.OK
+        st.healthy == false -> StatusPulseView.Mode.BAD
+        else -> StatusPulseView.Mode.WARN
+    }
+
+    /** Warnai tiap baris log berdasarkan levelnya: [INFO]/[WARN]/[ERROR]. */
+    private fun renderLog(lines: List<String>) {
+        if (lines.isEmpty()) {
+            b.tvLog.text = "Belum ada aktivitas."
+            b.tvLog.setTextColor(ContextCompat.getColor(this, R.color.log_info))
+            return
+        }
+        val timeColor = ContextCompat.getColor(this, R.color.log_time)
+        val infoColor = ContextCompat.getColor(this, R.color.log_info)
+        val warnColor = ContextCompat.getColor(this, R.color.log_warn)
+        val errorColor = ContextCompat.getColor(this, R.color.log_error)
+
+        val sb = SpannableStringBuilder()
+        lines.takeLast(120).forEachIndexed { i, raw ->
+            val levelColor = when {
+                raw.contains("[ERROR]") -> errorColor
+                raw.contains("[WARN]") -> warnColor
+                else -> infoColor
+            }
+            val start = sb.length
+            sb.append(raw)
+
+            // Timestamp (8 char "HH:mm:ss") lebih redup.
+            if (raw.length >= 8) {
+                sb.setSpan(
+                    ForegroundColorSpan(timeColor),
+                    start, start + 8,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+            // Sisa baris mengikuti warna level.
+            val msgStart = (start + 8).coerceAtMost(sb.length)
+            sb.setSpan(
+                ForegroundColorSpan(levelColor),
+                msgStart, sb.length,
+                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            if (i != lines.size - 1) sb.append('\n')
+        }
+        b.tvLog.text = sb
     }
 
     private fun buildDetail(st: MonitorState.Snapshot): String = when {
@@ -248,19 +297,21 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshStatus() {
         val ready = ShizukuBridge.isReady()
-        b.tvShizuku.text = "Shizuku: ${ShizukuBridge.statusText(this)}"
+        b.tvShizuku.text = ShizukuBridge.statusText(this)
         b.btnShizuku.text = if (ready) "Cek ulang" else "Hubungkan"
+        b.icShizuku.setImageResource(if (ready) R.drawable.ic_check else R.drawable.ic_alert)
 
         val pm = getSystemService(PowerManager::class.java)
         val ignoring = pm.isIgnoringBatteryOptimizations(packageName)
         b.tvBattery.text =
-            if (ignoring) "Baterai: sudah dikecualikan" else "Baterai: perlu dikecualikan"
+            if (ignoring) "Sudah dikecualikan dari optimasi" else "Perlu dikecualikan agar tidak dimatikan"
         b.btnBattery.visibility = if (ignoring) View.GONE else View.VISIBLE
+        b.icBattery.setImageResource(if (ignoring) R.drawable.ic_check else R.drawable.ic_alert)
 
         if (!config.enabled) {
             b.tvStatus.text = "Berhenti"
             b.tvStatusDetail.text = "Belum aktif"
-            b.dotStatus.setBackgroundResource(R.drawable.dot_grey)
+            b.pulseStatus.setMode(StatusPulseView.Mode.OFF)
         }
         b.tvTotalRefresh.text = config.totalRefresh.toString()
     }

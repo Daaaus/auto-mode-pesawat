@@ -31,6 +31,9 @@
 -keep class id.autoair.app.service.BootReceiver
 -keep class id.autoair.app.ui.MainActivity
 
+# Custom view dirujuk dari layout XML lewat nama lengkap; jangan direname.
+-keep class id.autoair.app.ui.StatusPulseView { *; }
+
 # Coroutines
 -dontwarn kotlinx.coroutines.**
 -keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }

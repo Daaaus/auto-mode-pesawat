@@ -1,4 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#1565C0</color>
+    <!-- ===== Design tokens: dark, warm-neutral + terracotta accent ===== -->
+    <color name="ic_launcher_background">#17140F</color>
+
+    <!-- Latar & permukaan -->
+    <color name="bg">#100F0D</color>
+    <color name="surface">#1A1814</color>
+    <color name="surface_high">#221F1A</color>
+    <color name="surface_higher">#2A2620</color>
+    <color name="outline">#322D26</color>
+    <color name="outline_soft">#26221D</color>
+
+    <!-- Aksen utama -->
+    <color name="accent">#D97757</color>
+    <color name="accent_dim">#3A2A22</color>
+    <color name="on_accent">#1E0F08</color>
+
+    <!-- Teks -->
+    <color name="text_primary">#F1EDE6</color>
+    <color name="text_secondary">#A39E93</color>
+    <color name="text_tertiary">#6E6960</color>
+
+    <!-- Semantik -->
+    <color name="ok">#58C184</color>
+    <color name="ok_dim">#16301F</color>
+    <color name="warn">#E0AC4E</color>
+    <color name="warn_dim">#33270F</color>
+    <color name="bad">#DF635A</color>
+    <color name="bad_dim">#351A17</color>
+    <color name="off">#6E6960</color>
+
+    <!-- Terminal log -->
+    <color name="term_bg">#121110</color>
+    <color name="log_info">#8F8A81</color>
+    <color name="log_warn">#E0AC4E</color>
+    <color name="log_error">#DF635A</color>
+    <color name="log_time">#5B564D</color>
 </resources>
