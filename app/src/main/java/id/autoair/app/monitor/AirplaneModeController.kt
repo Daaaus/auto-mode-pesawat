@@ -85,31 +85,86 @@ class AirplaneModeController(
     /**
      * Broadcast agar system service bereaksi. Butuh identitas shell,
      * jadi dikirim lewat Shizuku; broadcast dari app biasa akan ditolak.
+     *
+     * Dikirim tanpa ditunggu: hasilnya tidak dipakai, dan menunggu spawn shell
+     * selesai menambah ratusan milidetik tepat di jalur kritis toggle.
+     * Broadcast dari proses aplikasi dikirim juga sebagai pelengkap, karena
+     * sebagian ROM menerimanya dan biayanya nihil.
      */
     private fun broadcastAirplaneChanged(on: Boolean) {
         val state = if (on) "true" else "false"
-        val r = ShizukuBridge.exec(
+        ShizukuBridge.execAsync(
             "am broadcast -a android.intent.action.AIRPLANE_MODE --ez state $state"
         )
-        if (!r.ok) {
-            // Upaya terakhir: kirim dari proses aplikasi (biasanya diabaikan sistem).
-            runCatching {
-                context.sendBroadcast(
-                    Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED).putExtra("state", on)
-                )
-            }
+        runCatching {
+            context.sendBroadcast(
+                Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED).putExtra("state", on)
+            )
         }
     }
 
     /** Tunggu sampai sistem benar-benar melaporkan status yang diminta. */
-    private suspend fun awaitState(expected: Boolean, timeoutMs: Long = 8000): Boolean {
+    private suspend fun awaitState(expected: Boolean, timeoutMs: Long = 4000): Boolean {
+        // Sering sudah benar seketika karena penulisan Settings.Global bersifat
+        // sinkron; polling rapat membuat kasus itu tidak membayar jeda apa pun.
+        if (isAirplaneModeOn() == expected) return true
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
+            delay(60)
             if (isAirplaneModeOn() == expected) return true
-            delay(300)
         }
         Logger.warn("status mode pesawat tidak berubah dalam ${timeoutMs}ms")
         return false
+    }
+
+    /**
+     * Paksa data seluler attach ulang: `svc data disable` lalu `enable`.
+     *
+     * Dipakai sebagai eskalasi bila toggle mode pesawat berulang kali tidak
+     * memulihkan koneksi - kadang radio tetap nyangkut pada sel yang sama dan
+     * hanya siklus data yang melepaskannya.
+     */
+    suspend fun kickMobileData() {
+        Logger.warn("kick data seluler (svc data off/on)")
+        val off = ShizukuBridge.exec("svc data disable", timeoutSec = 5)
+        if (!off.ok) {
+            Logger.warn("svc data disable gagal: ${off.output}")
+            return
+        }
+        // Data sekarang MATI. Bila proses dibunuh sebelum enable, flag ini yang
+        // menyelamatkan pengguna dari kehilangan data seluler permanen.
+        config.dataKickInProgress = true
+        try {
+            delay(1200)
+            var on = ShizukuBridge.exec("svc data enable", timeoutSec = 5).ok
+            if (!on) {
+                // Sama seperti mode pesawat: meninggalkan data mati jauh lebih
+                // buruk daripada gagal refresh, jadi dicoba beberapa kali.
+                for (i in 1..3) {
+                    Logger.error("gagal menyalakan data, percobaan ulang $i/3")
+                    delay(500)
+                    if (ShizukuBridge.exec("svc data enable", timeoutSec = 5).ok) {
+                        on = true
+                        break
+                    }
+                }
+            }
+            if (on) Logger.info("data seluler dinyalakan ulang")
+            else Logger.error("DATA SELULER MASIH MATI - nyalakan manual!")
+        } finally {
+            config.dataKickInProgress = false
+        }
+    }
+
+    /** Pemulihan saat start: nyalakan data yang tertinggal mati. */
+    fun recoverStuckData(): Boolean {
+        if (!config.dataKickInProgress) return false
+        Logger.warn("terdeteksi kick data terputus - menyalakan data seluler")
+        val r = ShizukuBridge.exec("svc data enable", timeoutSec = 5)
+        config.dataKickInProgress = false
+        if (r.ok) Logger.info("data seluler dipulihkan")
+        else Logger.error("gagal memulihkan data seluler - nyalakan manual")
+        return true
     }
 
     // --- Settings.Global helpers -------------------------------------------------

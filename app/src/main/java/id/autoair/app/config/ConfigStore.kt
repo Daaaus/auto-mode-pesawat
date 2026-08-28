@@ -11,6 +11,25 @@ class ConfigStore(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("autoair_config", Context.MODE_PRIVATE)
 
+    init {
+        // Migrasi ke profil cepat. Instalasi lama menyimpan timeout 10s /
+        // cooldown 15s / hold 3s yang membuat satu siklus refresh bisa lebih
+        // dari satu menit. Tanpa migrasi paksa, pengguna lama tidak akan pernah
+        // merasakan perbaikan karena nilai lambat itu sudah ada di prefs.
+        if (prefs.getInt(KEY_SPEED_REV, 0) < SPEED_REV) {
+            prefs.edit()
+                .putInt(KEY_TIMEOUT, DEF_TIMEOUT)
+                .putInt(KEY_COOLDOWN, DEF_COOLDOWN)
+                .putInt(KEY_HOLD, DEF_HOLD)
+                .putInt(KEY_MAX_RETRY, DEF_MAX_RETRY)
+                .putInt(KEY_RETRY_GAP_MS, DEF_RETRY_GAP_MS)
+                .putInt(KEY_UNHEALTHY_INTERVAL, DEF_UNHEALTHY_INTERVAL)
+                .putBoolean(KEY_AGGRESSIVE, true)
+                .putInt(KEY_SPEED_REV, SPEED_REV)
+                .apply()
+        }
+    }
+
     var enabled: Boolean
         get() = prefs.getBoolean(KEY_ENABLED, false)
         set(v) = prefs.edit().putBoolean(KEY_ENABLED, v).apply()
@@ -20,14 +39,35 @@ class ConfigStore(context: Context) {
         get() = prefs.getInt(KEY_INTERVAL, 60)
         set(v) = prefs.edit().putInt(KEY_INTERVAL, v.coerceIn(5, 3600)).apply()
 
+    /**
+     * Mode agresif: saat internet terdeteksi mati, cek ulang jauh lebih cepat,
+     * tahan mode pesawat lebih lama secara bertahap, dan kick data seluler.
+     */
+    var aggressive: Boolean
+        get() = prefs.getBoolean(KEY_AGGRESSIVE, true)
+        set(v) = prefs.edit().putBoolean(KEY_AGGRESSIVE, v).apply()
+
+    /**
+     * Interval saat kondisi BERMASALAH (detik). Dipakai menggantikan
+     * [intervalSec] selama internet masih mati, supaya reaksi cepat.
+     */
+    var unhealthyIntervalSec: Int
+        get() = prefs.getInt(KEY_UNHEALTHY_INTERVAL, DEF_UNHEALTHY_INTERVAL)
+        set(v) = prefs.edit().putInt(KEY_UNHEALTHY_INTERVAL, v.coerceIn(2, 600)).apply()
+
     /** detik timeout tiap probe */
     var timeoutSec: Int
-        get() = prefs.getInt(KEY_TIMEOUT, 10)
-        set(v) = prefs.edit().putInt(KEY_TIMEOUT, v.coerceIn(2, 60)).apply()
+        get() = prefs.getInt(KEY_TIMEOUT, DEF_TIMEOUT)
+        set(v) = prefs.edit().putInt(KEY_TIMEOUT, v.coerceIn(1, 60)).apply()
 
     var maxRetry: Int
-        get() = prefs.getInt(KEY_MAX_RETRY, 3)
+        get() = prefs.getInt(KEY_MAX_RETRY, DEF_MAX_RETRY)
         set(v) = prefs.edit().putInt(KEY_MAX_RETRY, v.coerceIn(1, 10)).apply()
+
+    /** jeda antar percobaan probe (milidetik) */
+    var retryGapMs: Int
+        get() = prefs.getInt(KEY_RETRY_GAP_MS, DEF_RETRY_GAP_MS)
+        set(v) = prefs.edit().putInt(KEY_RETRY_GAP_MS, v.coerceIn(0, 10000)).apply()
 
     /** host yang diprobe, dipisah spasi (seperti PING_TARGET) */
     var pingTargets: String
@@ -74,12 +114,12 @@ class ConfigStore(context: Context) {
 
     /** lama mode pesawat menyala sebelum dimatikan lagi (detik) */
     var airplaneHoldSec: Int
-        get() = prefs.getInt(KEY_HOLD, 3)
+        get() = prefs.getInt(KEY_HOLD, DEF_HOLD)
         set(v) = prefs.edit().putInt(KEY_HOLD, v.coerceIn(1, 30)).apply()
 
     /** jeda setelah refresh sebelum siklus normal dilanjutkan (detik) */
     var cooldownSec: Int
-        get() = prefs.getInt(KEY_COOLDOWN, 15)
+        get() = prefs.getInt(KEY_COOLDOWN, DEF_COOLDOWN)
         set(v) = prefs.edit().putInt(KEY_COOLDOWN, v.coerceIn(0, 600)).apply()
 
     /** gunakan `cmd connectivity airplane-mode` alih-alih Settings.Global */
@@ -101,6 +141,18 @@ class ConfigStore(context: Context) {
             prefs.edit().putBoolean(KEY_TOGGLE_PROGRESS, v).commit()
         }
 
+    /**
+     * Penanda bahwa siklus kick data seluler sedang berjalan. Sama seperti
+     * [airplaneToggleInProgress]: bila proses mati antara `svc data disable`
+     * dan `enable`, data akan tertinggal MATI, jadi flag ini dipakai untuk
+     * memulihkannya saat start berikutnya. commit() disengaja.
+     */
+    var dataKickInProgress: Boolean
+        get() = prefs.getBoolean(KEY_DATA_KICK, false)
+        set(v) {
+            prefs.edit().putBoolean(KEY_DATA_KICK, v).commit()
+        }
+
     /** total refresh sejak dipasang, untuk ditampilkan di UI */
     var totalRefresh: Int
         get() = prefs.getInt(KEY_TOTAL_REFRESH, 0)
@@ -112,10 +164,25 @@ class ConfigStore(context: Context) {
         set(v) = prefs.edit().putString(KEY_ORIG_RADIOS, v).apply()
 
     companion object {
+        // ---- Profil cepat (v1.8) ----------------------------------------------
+        // Naikkan SPEED_REV bila default di bawah diubah lagi, supaya instalasi
+        // lama ikut termigrasi.
+        private const val SPEED_REV = 2
+        const val DEF_TIMEOUT = 3          // 10 -> 3 detik
+        const val DEF_COOLDOWN = 3         // 15 -> 3 detik
+        const val DEF_HOLD = 2             // 3  -> 2 detik
+        const val DEF_MAX_RETRY = 2        // 3  -> 2 percobaan
+        const val DEF_RETRY_GAP_MS = 400   // 2000 -> 400 ms
+        const val DEF_UNHEALTHY_INTERVAL = 8   // cek tiap 8 dtk selama internet mati
+
         private const val KEY_ENABLED = "enabled"
         private const val KEY_INTERVAL = "interval"
         private const val KEY_TIMEOUT = "timeout"
         private const val KEY_MAX_RETRY = "max_retry"
+        private const val KEY_RETRY_GAP_MS = "retry_gap_ms"
+        private const val KEY_UNHEALTHY_INTERVAL = "unhealthy_interval"
+        private const val KEY_AGGRESSIVE = "aggressive"
+        private const val KEY_SPEED_REV = "speed_rev"
         private const val KEY_TARGETS = "ping_targets"
         private const val KEY_EXPECTED_IP = "expected_ip"
         private const val KEY_IP_ECHO = "ip_echo"
@@ -128,6 +195,7 @@ class ConfigStore(context: Context) {
         private const val KEY_USE_CMD = "use_cmd"
         private const val KEY_ORIG_RADIOS = "orig_radios"
         private const val KEY_TOGGLE_PROGRESS = "toggle_in_progress"
+        private const val KEY_DATA_KICK = "data_kick_in_progress"
         private const val KEY_TOTAL_REFRESH = "total_refresh"
     }
 }

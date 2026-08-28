@@ -8,6 +8,10 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -33,12 +37,38 @@ class NetMonitorService : Service() {
     private lateinit var engine: MonitorEngine
     private lateinit var config: ConfigStore
 
+    private var cm: ConnectivityManager? = null
+
+    /**
+     * Sistem tahu lebih dulu ketika jaringan hilang atau kehilangan status
+     * VALIDATED. Memakai sinyal itu untuk membangunkan loop membuat reaksi
+     * hampir seketika, bukan menunggu sampai interval berikutnya.
+     */
+    private val netCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onLost(network: Network) {
+            engine.requestWake("jaringan hilang")
+        }
+
+        override fun onAvailable(network: Network) {
+            // Berguna setelah refresh: begitu jaringan kembali, verifikasi
+            // langsung tanpa menunggu sisa interval.
+            engine.requestWake("jaringan tersedia")
+        }
+
+        override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) {
+            if (!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                engine.requestWake("jaringan tidak lagi tervalidasi")
+            }
+        }
+    }
+
     override fun onCreate() {
         super.onCreate()
         config = ConfigStore(this)
         engine = MonitorEngine(this, config)
         createChannel()
         startForegroundCompat(buildNotification("Memulai...", null))
+        registerNetworkCallback()
 
         scope.launch {
             engine.state.collect { st ->
@@ -53,6 +83,17 @@ class NetMonitorService : Service() {
                 }
                 notify(buildNotification("$icon ${st.statusText}", sub))
             }
+        }
+    }
+
+    private fun registerNetworkCallback() {
+        runCatching {
+            val manager = getSystemService(ConnectivityManager::class.java) ?: return
+            val req = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+            manager.registerNetworkCallback(req, netCallback)
+            cm = manager
         }
     }
 
@@ -77,6 +118,7 @@ class NetMonitorService : Service() {
     }
 
     override fun onDestroy() {
+        runCatching { cm?.unregisterNetworkCallback(netCallback) }
         // onStop() memulihkan airplane_mode_radios lewat Shizuku. Jalankan lebih
         // dulu dan secara sinkron; membatalkan scope duluan bisa memotongnya dan
         // meninggalkan setelan radio pengguna dalam keadaan berubah.

@@ -6,6 +6,9 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import id.autoair.app.config.ConfigStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.net.HttpURLConnection
@@ -71,6 +74,21 @@ class ConnectivityProbe(
         return false
     }
 
+    /**
+     * Penyaring cepat tanpa I/O: sistem sendiri sudah terus memvalidasi jaringan.
+     * Bila TIDAK ada satu pun jaringan bertanda VALIDATED, hampir pasti internet
+     * mati dan kita bisa langsung menyimpulkannya tanpa menunggu timeout HTTP.
+     * Sebaliknya VALIDATED tidak dipakai untuk menyimpulkan "sehat", karena
+     * status itu bisa basi dan tidak mendeteksi halaman pengalihan operator.
+     */
+    fun noValidatedNetwork(): Boolean {
+        for (n in cm.allNetworks) {
+            val caps = cm.getNetworkCapabilities(n) ?: continue
+            if (caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) return false
+        }
+        return true
+    }
+
     fun dataStateSummary(): String {
         val active = cm.activeNetwork ?: return "tidak ada jaringan aktif"
         val caps = cm.getNetworkCapabilities(active) ?: return "kapabilitas tidak diketahui"
@@ -94,50 +112,81 @@ class ConnectivityProbe(
             return@withContext Result.NoInternet("tidak ada transport seluler/VPN")
         }
 
-        // Reachability lewat jalur default (mewakili pemakaian nyata, termasuk VPN).
         val targets = config.pingTargets.split(" ", ",")
             .map { it.trim() }.filter { it.isNotEmpty() }
-        var reachable = false
+            .ifEmpty { listOf("www.gstatic.com") }
+
+        // Target diprobe PARALEL dan dilomba: begitu satu menjawab 204 kita
+        // langsung menyimpulkan sehat, sisanya dibatalkan. Versi lama menunggu
+        // tiap target berurutan, sehingga saat internet mati waktu deteksi
+        // menjadi (jumlah target x timeout) - penyumbang lambat terbesar.
+        val race = raceReach(targets, timeoutMs, null)
+        if (race == null) {
+            val expected = config.expectedIp
+            if (expected.isBlank()) return@withContext Result.Healthy
+
+            val measureOn = if (config.checkIpOnCellular) cell else null
+            if (config.checkIpOnCellular && cell == null) {
+                return@withContext Result.IpUnknown("network seluler tidak ditemukan")
+            }
+            val actual = fetchPublicIp(timeoutMs, measureOn)
+                ?: return@withContext Result.IpUnknown(
+                    if (measureOn != null) "gagal membaca IP seluler (VPN always-on memblokir?)"
+                    else "gagal membaca IP publik"
+                )
+            return@withContext if (ipMatches(actual, expected)) {
+                Result.Healthy
+            } else {
+                Result.IpMismatch(actual, expected)
+            }
+        }
+
+        // Semua target gagal. Diagnostik tambahan lewat jalur seluler hanya
+        // berguna bila ada VPN yang mungkin jadi penyebabnya; tanpa VPN itu
+        // cuma membuang satu timeout lagi.
+        if (cell != null && vpnActive()) {
+            if (reach(targets.first(), timeoutMs, cell) == null) {
+                return@withContext Result.NoInternet(
+                    "jalur default mati walau seluler hidup ($race)"
+                )
+            }
+        }
+        return@withContext Result.NoInternet(race)
+    }
+
+    /**
+     * Lomba beberapa host sekaligus.
+     * @return null bila ada yang sehat, atau detail kegagalan terakhir.
+     */
+    private suspend fun raceReach(
+        hosts: List<String>,
+        timeoutMs: Int,
+        network: Network?
+    ): String? = coroutineScope {
+        if (hosts.size == 1) {
+            return@coroutineScope reach(hosts[0], timeoutMs, network)
+                ?.let { "${hosts[0]}: $it" }
+        }
+        // Kapasitas penuh: pengirim tidak pernah memblokir walau kita berhenti
+        // menerima setelah ada yang menang.
+        val results = Channel<Pair<String, String?>>(hosts.size)
+        val jobs = hosts.map { host ->
+            launch { results.send(host to reach(host, timeoutMs, network)) }
+        }
         var lastDetail = "tidak ada target"
-        for (host in targets) {
-            val err = reach(host, timeoutMs, null)
+        var healthy = false
+        var received = 0
+        while (received < hosts.size) {
+            val (host, err) = results.receive()
+            received++
             if (err == null) {
-                reachable = true
+                healthy = true
                 break
             }
             lastDetail = "$host: $err"
         }
-
-        if (!reachable) {
-            // Bedakan: VPN putus tetapi seluler sehat, atau memang seluler mati.
-            if (cell != null && reach(targets.firstOrNull() ?: "www.gstatic.com", timeoutMs, cell) == null) {
-                return@withContext Result.NoInternet("jalur default mati walau seluler hidup ($lastDetail)")
-            }
-            return@withContext Result.NoInternet(lastDetail)
-        }
-
-        val expected = config.expectedIp
-        if (expected.isBlank()) {
-            return@withContext Result.Healthy
-        }
-
-        // Inti perbaikan: ukur IP di sisi seluler, bukan lewat terowongan VPN.
-        val measureOn = if (config.checkIpOnCellular) cell else null
-        if (config.checkIpOnCellular && cell == null) {
-            return@withContext Result.IpUnknown("network seluler tidak ditemukan")
-        }
-
-        val actual = fetchPublicIp(timeoutMs, measureOn)
-            ?: return@withContext Result.IpUnknown(
-                if (measureOn != null) "gagal membaca IP seluler (VPN always-on memblokir?)"
-                else "gagal membaca IP publik"
-            )
-
-        return@withContext if (ipMatches(actual, expected)) {
-            Result.Healthy
-        } else {
-            Result.IpMismatch(actual, expected)
-        }
+        jobs.forEach { it.cancel() }
+        if (healthy) null else lastDetail
     }
 
     /**

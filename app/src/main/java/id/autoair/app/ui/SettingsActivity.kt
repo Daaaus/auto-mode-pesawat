@@ -38,6 +38,18 @@ class SettingsActivity : AppCompatActivity() {
             saveConfig()
         }
 
+        b.btnFastProfile.setOnClickListener {
+            b.etTimeout.setText(ConfigStore.DEF_TIMEOUT.toString())
+            b.etRetry.setText(ConfigStore.DEF_MAX_RETRY.toString())
+            b.etRetryGap.setText(ConfigStore.DEF_RETRY_GAP_MS.toString())
+            b.etHold.setText(ConfigStore.DEF_HOLD.toString())
+            b.etCooldown.setText(ConfigStore.DEF_COOLDOWN.toString())
+            b.etUnhealthyInterval.setText(ConfigStore.DEF_UNHEALTHY_INTERVAL.toString())
+            b.switchAggressive.isChecked = true
+            saveConfig(silent = true)
+            toast("Profil cepat dipulihkan")
+        }
+
         b.btnTestRefresh.setOnClickListener { confirmTestRefresh() }
     }
 
@@ -48,8 +60,13 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun loadConfigIntoUi() {
         b.etInterval.setText(config.intervalSec.toString())
+        b.etUnhealthyInterval.setText(config.unhealthyIntervalSec.toString())
+        b.switchAggressive.isChecked = config.aggressive
         b.etTimeout.setText(config.timeoutSec.toString())
         b.etRetry.setText(config.maxRetry.toString())
+        b.etRetryGap.setText(config.retryGapMs.toString())
+        b.etHold.setText(config.airplaneHoldSec.toString())
+        b.etCooldown.setText(config.cooldownSec.toString())
         b.etTargets.setText(config.pingTargets)
         b.etExpectedIp.setText(config.expectedIp)
         b.etIpEcho.setText(config.ipEchoUrl)
@@ -62,8 +79,15 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun saveConfig(silent: Boolean = false) {
         config.intervalSec = b.etInterval.text.toString().toIntOrNull() ?: 60
-        config.timeoutSec = b.etTimeout.text.toString().toIntOrNull() ?: 10
-        config.maxRetry = b.etRetry.text.toString().toIntOrNull() ?: 3
+        config.unhealthyIntervalSec = b.etUnhealthyInterval.text.toString().toIntOrNull()
+            ?: ConfigStore.DEF_UNHEALTHY_INTERVAL
+        config.aggressive = b.switchAggressive.isChecked
+        config.timeoutSec = b.etTimeout.text.toString().toIntOrNull() ?: ConfigStore.DEF_TIMEOUT
+        config.maxRetry = b.etRetry.text.toString().toIntOrNull() ?: ConfigStore.DEF_MAX_RETRY
+        config.retryGapMs =
+            b.etRetryGap.text.toString().toIntOrNull() ?: ConfigStore.DEF_RETRY_GAP_MS
+        config.airplaneHoldSec = b.etHold.text.toString().toIntOrNull() ?: ConfigStore.DEF_HOLD
+        config.cooldownSec = b.etCooldown.text.toString().toIntOrNull() ?: ConfigStore.DEF_COOLDOWN
         config.pingTargets =
             b.etTargets.text.toString().ifBlank { "www.gstatic.com connectivitycheck.gstatic.com" }
         config.expectedIp = b.etExpectedIp.text.toString()

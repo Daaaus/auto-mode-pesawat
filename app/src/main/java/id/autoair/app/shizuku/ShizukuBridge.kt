@@ -48,10 +48,23 @@ object ShizukuBridge {
     fun isReady(): Boolean = isAvailable() && hasPermission()
 
     /**
+     * Jalankan perintah tanpa menunggu hasil. Dipakai untuk perintah yang
+     * hasilnya tidak dipakai (misalnya broadcast AIRPLANE_MODE): menunggu
+     * spawn shell selesai hanya menambah ratusan milidetik pada jalur kritis
+     * toggle mode pesawat.
+     */
+    fun execAsync(command: String) {
+        if (!isReady()) return
+        Thread {
+            runCatching { exec(command, timeoutSec = 5) }
+        }.apply { isDaemon = true }.start()
+    }
+
+    /**
      * Jalankan perintah shell melalui Shizuku.
      * `Shizuku.newProcess` adalah API tersembunyi, diakses lewat refleksi.
      */
-    fun exec(command: String, timeoutSec: Long = 15): ExecResult {
+    fun exec(command: String, timeoutSec: Long = 8): ExecResult {
         if (!isReady()) {
             return ExecResult(-1, "", "shizuku tidak siap")
         }

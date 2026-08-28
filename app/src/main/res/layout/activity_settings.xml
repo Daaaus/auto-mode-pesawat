@@ -67,10 +67,44 @@
                     android:textStyle="bold" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchHotspot"
+                    android:id="@+id/switchAggressive"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
+                    android:minHeight="44dp"
+                    android:text="Mode agresif"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="4dp"
+                    android:text="Saat internet mati: cek jauh lebih sering, tahan mode pesawat lebih lama bila gagal beruntun, dan kick data seluler setelah 3 kegagalan."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:hint="Interval saat internet mati (detik)"
+                    app:helperText="Dipakai selama koneksi bermasalah. Kecil = paling responsif."
+                    app:helperTextTextColor="@color/text_tertiary">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etUnhealthyInterval"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:textColor="@color/text_primary" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchHotspot"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:minHeight="44dp"
                     android:text="Pertahankan hotspot"
                     android:textColor="@color/text_primary"
@@ -140,6 +174,14 @@
                 android:padding="18dp">
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnFastProfile"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pulihkan profil cepat"
+                    android:textColor="@color/accent" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnToggleAdvanced"
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="match_parent"
@@ -184,6 +226,48 @@
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/etRetry"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:textColor="@color/text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Jeda antar percobaan (ms)">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etRetryGap"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:textColor="@color/text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Lama mode pesawat ON (detik)">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etHold"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number"
+                            android:textColor="@color/text_primary" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Jeda setelah refresh (detik)">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/etCooldown"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:inputType="number"
