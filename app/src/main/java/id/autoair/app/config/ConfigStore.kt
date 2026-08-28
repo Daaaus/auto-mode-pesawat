@@ -18,7 +18,7 @@ class ConfigStore(context: Context) {
     /** detik antar siklus pemantauan */
     var intervalSec: Int
         get() = prefs.getInt(KEY_INTERVAL, 60)
-        set(v) = prefs.edit().putInt(KEY_INTERVAL, v.coerceIn(10, 3600)).apply()
+        set(v) = prefs.edit().putInt(KEY_INTERVAL, v.coerceIn(5, 3600)).apply()
 
     /** detik timeout tiap probe */
     var timeoutSec: Int

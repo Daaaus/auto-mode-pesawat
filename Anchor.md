@@ -125,4 +125,8 @@ AGP 8.5.2 · Kotlin 2.0.21 · Gradle 8.7 · `material:1.12.0` · `shizuku:api:13
 
 ## Pekerjaan berikutnya (terpotong)
 
-**"improve ui lagi 10x anti slop"** — redesain UI jadi 10x lebih baik, anti-generik. Arah: flat, tema gelap bersih, warna aksi `#d97757`, tipografi rapi, whitespace lega, tanpa gradien dekoratif, tanpa emoji, tiap elemen fungsional. Tetap pakai ViewBinding + plumbing `MonitorState`/`Logger` yang ada. Setelah itu bump version, tag `v1.6.0`, CI auto-rilis. Opsional: update APK di VPS.
+**Selesai (v1.6 & v1.7):** redesain UI 10x anti-slop (tema gelap terracotta, hero
+pulse, log terminal berwarna), ikon launcher baru, pengaturan dipindah ke layar
+khusus di balik ikon gear, auto-scroll log hanya saat di dasar, interval min 5 dtk.
+
+Berikutnya: opsional update APK di VPS; tes di HP fisik.

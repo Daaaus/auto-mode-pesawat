@@ -81,6 +81,10 @@ class MainActivity : AppCompatActivity() {
     // ------------------------------------------------------------------ actions
 
     private fun bindButtons() {
+        b.btnSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
         b.btnShizuku.setOnClickListener {
             when {
                 !ShizukuBridge.isAvailable() -> showShizukuHelp()
@@ -95,15 +99,6 @@ class MainActivity : AppCompatActivity() {
 
         b.btnBattery.setOnClickListener { requestIgnoreBattery() }
 
-        b.btnToggleAdvanced.setOnClickListener {
-            val show = b.boxAdvanced.visibility != View.VISIBLE
-            b.boxAdvanced.visibility = if (show) View.VISIBLE else View.GONE
-            b.btnToggleAdvanced.text =
-                if (show) "Sembunyikan lanjutan" else "Pengaturan lanjutan"
-        }
-
-        b.btnSave.setOnClickListener { saveConfig() }
-
         b.btnClearLog.setOnClickListener {
             Logger.clear()
             toast("Log dihapus")
@@ -115,35 +110,6 @@ class MainActivity : AppCompatActivity() {
             cm.setPrimaryClip(ClipData.newPlainText("log", text))
             toast("Log disalin")
         }
-
-        b.btnTestRefresh.setOnClickListener { confirmTestRefresh() }
-    }
-
-    /**
-     * Uji refresh benar-benar mematikan radio sesaat, jadi konfirmasi dulu.
-     * Tanpa ini pengguna bisa tidak sengaja memutus panggilan atau unduhan.
-     */
-    private fun confirmTestRefresh() {
-        if (!ShizukuBridge.isReady()) {
-            toast("Shizuku belum siap")
-            return
-        }
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Uji refresh sekarang?")
-            .setMessage(
-                "Mode pesawat akan dinyalakan ${config.airplaneHoldSec} detik lalu " +
-                    "dimatikan lagi. Koneksi akan terputus sebentar."
-            )
-            .setPositiveButton("Jalankan") { _, _ ->
-                saveConfig(silent = true)
-                config.enabled = true
-                b.switchEnabled.isChecked = true
-                NetMonitorService.start(this)
-                NetMonitorService.testRefresh(this)
-                toast("Uji dijalankan, lihat log")
-            }
-            .setNegativeButton("Batal", null)
-            .show()
     }
 
     private fun showShizukuHelp() {
@@ -182,35 +148,7 @@ class MainActivity : AppCompatActivity() {
             refreshStatus()
         }
 
-        b.etInterval.setText(config.intervalSec.toString())
-        b.etTimeout.setText(config.timeoutSec.toString())
-        b.etRetry.setText(config.maxRetry.toString())
-        b.etTargets.setText(config.pingTargets)
-        b.etExpectedIp.setText(config.expectedIp)
-        b.etIpEcho.setText(config.ipEchoUrl)
-        b.etRadios.setText(config.airplaneRadios)
-        b.switchHotspot.isChecked = config.keepHotspot
-        b.switchCallGuard.isChecked = config.skipWhenInCall
-        b.switchUseCmd.isChecked = config.useCmdConnectivity
-        b.switchIpOnCellular.isChecked = config.checkIpOnCellular
-
         b.tvTotalRefresh.text = config.totalRefresh.toString()
-    }
-
-    private fun saveConfig(silent: Boolean = false) {
-        config.intervalSec = b.etInterval.text.toString().toIntOrNull() ?: 60
-        config.timeoutSec = b.etTimeout.text.toString().toIntOrNull() ?: 10
-        config.maxRetry = b.etRetry.text.toString().toIntOrNull() ?: 3
-        config.pingTargets = b.etTargets.text.toString().ifBlank { "www.gstatic.com" }
-        config.expectedIp = b.etExpectedIp.text.toString()
-        config.ipEchoUrl = b.etIpEcho.text.toString().ifBlank { "https://api.ipify.org" }
-        config.airplaneRadios = b.etRadios.text.toString().ifBlank { "cell,bluetooth,nfc,wimax" }
-        config.keepHotspot = b.switchHotspot.isChecked
-        config.skipWhenInCall = b.switchCallGuard.isChecked
-        config.useCmdConnectivity = b.switchUseCmd.isChecked
-        config.checkIpOnCellular = b.switchIpOnCellular.isChecked
-        if (!silent) toast("Tersimpan")
-        loadConfigIntoUi()
     }
 
     // -------------------------------------------------------------------- state
@@ -220,8 +158,18 @@ class MainActivity : AppCompatActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     Logger.lines.collect { lines ->
+                        // Tangkap posisi SEBELUM teks berubah: kalau pengguna sedang
+                        // membaca log lama (tidak di dasar), jangan ditarik ke bawah.
+                        val stickToBottom = isLogNearBottom()
                         renderLog(lines)
-                        b.scrollLog.post { b.scrollLog.fullScroll(View.FOCUS_DOWN) }
+                        if (stickToBottom) {
+                            b.scrollLog.post {
+                                val child = b.scrollLog.getChildAt(0)
+                                if (child != null) {
+                                    b.scrollLog.smoothScrollTo(0, child.bottom)
+                                }
+                            }
+                        }
                     }
                 }
                 launch {
@@ -243,6 +191,14 @@ class MainActivity : AppCompatActivity() {
         st.healthy == true -> StatusPulseView.Mode.OK
         st.healthy == false -> StatusPulseView.Mode.BAD
         else -> StatusPulseView.Mode.WARN
+    }
+
+    /** True bila log sedang berada (mendekati) dasar, sehingga aman auto-scroll. */
+    private fun isLogNearBottom(): Boolean {
+        val sv = b.scrollLog
+        val child = sv.getChildAt(0) ?: return true
+        val threshold = (48 * resources.displayMetrics.density).toInt()
+        return child.bottom - (sv.height + sv.scrollY) <= threshold
     }
 
     /** Warnai tiap baris log berdasarkan levelnya: [INFO]/[WARN]/[ERROR]. */
