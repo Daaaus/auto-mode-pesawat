@@ -1,0 +1,43 @@
+# Gradle
+.gradle/
+build/
+app/build/
+local.properties
+gradle.properties.local
+.kotlin/
+
+# ==== RAHASIA - JANGAN PERNAH DI-COMMIT ====
+keystore/
+*.jks
+*.keystore
+*.p12
+key.properties
+signing.properties
+secrets.properties
+*.token
+.env
+.env.*
+
+# APK / artefak build
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+release/
+outputs/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+captures/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Log
+*.log
