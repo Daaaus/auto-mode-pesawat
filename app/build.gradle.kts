@@ -19,8 +19,8 @@ android {
         applicationId = "id.autoair.app"
         minSdk = 30
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.10"
+        versionCode = 11
+        versionName = "1.11"
 
         // Buang resource bahasa yang tidak dipakai (hemat ~1 MB dari Material).
         resourceConfigurations += listOf("in", "en")

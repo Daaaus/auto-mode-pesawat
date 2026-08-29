@@ -239,6 +239,24 @@
                     android:textColor="@color/text_tertiary"
                     android:textSize="12sp" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchMaxRefresh"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:minHeight="44dp"
+                    android:text="Refresh rate maksimal selalu"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/tvMaxRefreshNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Patok layar ke Hz tertinggi yang didukung (terdeteksi otomatis). Gerakan lebih mulus, baterai lebih boros."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnKillBg"
                     style="@style/Widget.Material3.Button.OutlinedButton"

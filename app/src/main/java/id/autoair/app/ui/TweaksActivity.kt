@@ -128,6 +128,12 @@ class TweaksActivity : AppCompatActivity() {
         b.switchFastAnim.isChecked = config.tweakFastAnim
         b.switchFreezer.isChecked = config.tweakFreezerOn
         b.switchWifiScan.isChecked = config.tweakWifiScanThrottleOff
+        b.switchMaxRefresh.isChecked = config.tweakMaxRefreshRate
+        if (config.tweakMaxRefreshRateHz > 0f) {
+            b.tvMaxRefreshNote.text =
+                "Terdeteksi maksimal ${config.tweakMaxRefreshRateHz.toInt()} Hz. " +
+                    "Aktif = layar selalu di Hz ini; lebih mulus, lebih boros baterai."
+        }
         b.spinBgLimit.setSelection(
             bgLimits.indexOfFirst { it.second == config.tweakBgProcessLimit }.coerceAtLeast(0)
         )
@@ -171,6 +177,29 @@ class TweaksActivity : AppCompatActivity() {
             applyQuick("scan WiFi") { Tweaks.setWifiScanThrottleOff(on) }
         }
 
+        b.switchMaxRefresh.setOnCheckedChangeListener { _, on ->
+            if (!requireShizukuOrRevert(b.switchMaxRefresh, on)) return@setOnCheckedChangeListener
+            if (on) {
+                val hz = detectMaxRefreshRateHz()
+                if (hz == null) {
+                    toast("Layar ini maksimal 60 Hz - tweak tidak berguna")
+                    revertSwitch(b.switchMaxRefresh, attempted = true)
+                    return@setOnCheckedChangeListener
+                }
+                config.tweakMaxRefreshRateHz = hz
+                config.tweakMaxRefreshRate = true
+                b.tvMaxRefreshNote.text =
+                    "Terdeteksi maksimal ${hz.toInt()} Hz. " +
+                        "Aktif = layar selalu di Hz ini; lebih mulus, lebih boros baterai."
+                applyQuick("refresh rate ${hz.toInt()} Hz") {
+                    Tweaks.setMaxRefreshRate(true, hz)
+                }
+            } else {
+                config.tweakMaxRefreshRate = false
+                applyQuick("refresh rate adaptif") { Tweaks.setMaxRefreshRate(false, 0f) }
+            }
+        }
+
         b.btnKillBg.setOnClickListener {
             if (!requireShizuku()) return@setOnClickListener
             applyQuick("kosongkan RAM") { Tweaks.killBackgroundApps() }
@@ -206,12 +235,24 @@ class TweaksActivity : AppCompatActivity() {
     private fun requireShizukuOrRevert(sw: MaterialSwitch, attempted: Boolean): Boolean {
         if (ShizukuBridge.isReady()) return true
         toast("Shizuku belum siap - hubungkan dulu di layar utama")
+        revertSwitch(sw, attempted)
+        return false
+    }
+
+    /**
+     * Kembalikan switch ke posisi sebelum dicoba, lalu pasang ulang listener
+     * (yang harus dilepas dulu supaya perubahan programatik tidak memicu loop).
+     */
+    private fun revertSwitch(sw: MaterialSwitch, attempted: Boolean) {
         sw.setOnCheckedChangeListener(null)
         sw.isChecked = !attempted
-        // Pasang ulang listener yang barusan dilepas: delegasikan ke pemasang
-        // semula dengan memicu ulang seluruh bagian kinerja.
         setupPerformanceSection()
-        return false
+    }
+
+    /** Hz tertinggi yang didukung layar; null bila perangkat hanya 60 Hz. */
+    private fun detectMaxRefreshRateHz(): Float? {
+        val modes = display?.supportedModes ?: return null
+        return modes.maxOfOrNull { it.refreshRate }?.takeIf { it > 60f }
     }
 
     private fun revertSpinnerToConfig() {

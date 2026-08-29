@@ -155,6 +155,36 @@ object Tweaks {
         return ok
     }
 
+    /**
+     * Paksa refresh rate maksimal selalu aktif.
+     *
+     * Min DAN peak harus dipatok ke nilai yang sama: menaikkan peak saja tidak
+     * mengubah apa-apa karena sistem tetap bebas memilih mode rendah. Mematikan
+     * tweak = menghapus kedua kunci (bukan menulis 60), supaya perangkat
+     * kembali ke perilaku adaptif bawaannya persis seperti semula.
+     */
+    fun setMaxRefreshRate(on: Boolean, hz: Float): Boolean {
+        val ok = if (on) {
+            if (hz <= 0f) {
+                Logger.error("refresh rate tidak diatur: nilai Hz tidak valid")
+                return false
+            }
+            val v = String.format(java.util.Locale.US, "%.1f", hz)
+            ShizukuBridge.exec("settings put system peak_refresh_rate $v").ok &&
+                ShizukuBridge.exec("settings put system min_refresh_rate $v").ok
+        } else {
+            ShizukuBridge.exec("settings delete system peak_refresh_rate").ok &&
+                ShizukuBridge.exec("settings delete system min_refresh_rate").ok
+        }
+        if (ok) {
+            Logger.info(
+                if (on) "refresh rate dipatok ke ${hz.toInt()} Hz (selalu)"
+                else "refresh rate kembali adaptif"
+            )
+        } else Logger.error("gagal mengatur refresh rate")
+        return ok
+    }
+
     /** Bunuh semua aplikasi latar/cached untuk mengosongkan RAM seketika. */
     fun killBackgroundApps(): Boolean {
         val r = ShizukuBridge.exec("am kill-all", timeoutSec = 15)
@@ -201,6 +231,9 @@ object Tweaks {
         }
         if (config.tweakWifiScanThrottleOff) {
             if (setWifiScanThrottleOff(true)) applied++
+        }
+        if (config.tweakMaxRefreshRate && config.tweakMaxRefreshRateHz > 0f) {
+            if (setMaxRefreshRate(true, config.tweakMaxRefreshRateHz)) applied++
         }
         if (applied > 0) Logger.info("tweak optimasi diterapkan ulang ($applied)")
         return true
