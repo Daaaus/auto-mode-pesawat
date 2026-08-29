@@ -257,6 +257,40 @@
                     android:textColor="@color/text_tertiary"
                     android:textSize="12sp" />
 
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchFixedPerf"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:minHeight="44dp"
+                    android:text="Mode performa tetap"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Meminta sistem menahan clock CPU/GPU tetap tinggi (sustained performance). Efeknya tergantung perangkat; baterai lebih boros dan HP lebih hangat."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switchAdaptiveBatteryOff"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:minHeight="44dp"
+                    android:text="Matikan adaptive battery"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Aplikasi latar tidak lagi dibatasi secara adaptif. Lebih responsif, lebih boros daya."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnKillBg"
                     style="@style/Widget.Material3.Button.OutlinedButton"
@@ -308,6 +342,58 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="Masukkan ke whitelist Doze" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ================= BERBAHAYA ================= -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            app:cardBackgroundColor="@color/surface"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/bad_dim"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.06"
+                    android:text="BERBAHAYA"
+                    android:textColor="@color/bad"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="Mematikan throttle termal berarti sistem berhenti memperlambat CPU saat panas. Performa terjaga, tapi panas berlebih bisa merusak baterai dan komponen. Aktif sampai reboot atau dimatikan manual - sengaja TIDAK diterapkan ulang otomatis."
+                    android:textColor="@color/text_tertiary"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnThermalOff"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Matikan throttle termal" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnThermalOn"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pulihkan throttle termal"
+                    android:textColor="@color/accent" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

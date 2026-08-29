@@ -195,6 +195,20 @@ class ConfigStore(context: Context) {
         get() = prefs.getFloat(KEY_TWEAK_LOCK_RR_HZ, 0f)
         set(v) = prefs.edit().putFloat(KEY_TWEAK_LOCK_RR_HZ, v).apply()
 
+    /**
+     * Mode performa tetap (sustained performance mode). Sifatnya in-memory di
+     * PowerManagerService - hilang setiap reboot - jadi WAJIB diterapkan ulang
+     * saat service mulai, tidak cukup mengandalkan persistence sistem.
+     */
+    var tweakFixedPerfMode: Boolean
+        get() = prefs.getBoolean(KEY_TWEAK_FIXED_PERF, false)
+        set(v) = prefs.edit().putBoolean(KEY_TWEAK_FIXED_PERF, v).apply()
+
+    /** matikan adaptive battery (pembatasan latar adaptif dinonaktifkan) */
+    var tweakAdaptiveBatteryOff: Boolean
+        get() = prefs.getBoolean(KEY_TWEAK_ADAPTIVE_BATTERY, false)
+        set(v) = prefs.edit().putBoolean(KEY_TWEAK_ADAPTIVE_BATTERY, v).apply()
+
     /** total refresh sejak dipasang, untuk ditampilkan di UI */
     var totalRefresh: Int
         get() = prefs.getInt(KEY_TOTAL_REFRESH, 0)
@@ -245,5 +259,7 @@ class ConfigStore(context: Context) {
         private const val KEY_TWEAK_WIFI_SCAN = "tweak_wifi_scan_throttle_off"
         private const val KEY_TWEAK_LOCK_RR = "tweak_lock_refresh_rate"
         private const val KEY_TWEAK_LOCK_RR_HZ = "tweak_lock_refresh_rate_hz"
+        private const val KEY_TWEAK_FIXED_PERF = "tweak_fixed_perf_mode"
+        private const val KEY_TWEAK_ADAPTIVE_BATTERY = "tweak_adaptive_battery_off"
     }
 }

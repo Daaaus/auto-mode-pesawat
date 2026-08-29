@@ -129,6 +129,8 @@ class TweaksActivity : AppCompatActivity() {
         b.switchFreezer.isChecked = config.tweakFreezerOn
         b.switchWifiScan.isChecked = config.tweakWifiScanThrottleOff
         b.switchLockRefresh.isChecked = config.tweakLockRefreshRate
+        b.switchFixedPerf.isChecked = config.tweakFixedPerfMode
+        b.switchAdaptiveBatteryOff.isChecked = config.tweakAdaptiveBatteryOff
         if (config.tweakLockRefreshRateHz > 0f) {
             b.tvLockRefreshNote.text =
                 "Terkunci di ${config.tweakLockRefreshRateHz.toInt()} Hz. " +
@@ -191,6 +193,20 @@ class TweaksActivity : AppCompatActivity() {
             if (!requireShizuku()) return@setOnClickListener
             applyQuick("kosongkan RAM") { Tweaks.killBackgroundApps() }
         }
+
+        b.switchFixedPerf.setOnCheckedChangeListener { _, on ->
+            if (!requireShizukuOrRevert(b.switchFixedPerf, on)) return@setOnCheckedChangeListener
+            config.tweakFixedPerfMode = on
+            applyQuick("mode performa") { Tweaks.setFixedPerformanceMode(on) }
+        }
+
+        b.switchAdaptiveBatteryOff.setOnCheckedChangeListener { _, on ->
+            if (!requireShizukuOrRevert(b.switchAdaptiveBatteryOff, on)) {
+                return@setOnCheckedChangeListener
+            }
+            config.tweakAdaptiveBatteryOff = on
+            applyQuick("adaptive battery") { Tweaks.setAdaptiveBatteryOff(on) }
+        }
     }
 
     // ------------------------------------------------------------- ketahanan
@@ -204,6 +220,31 @@ class TweaksActivity : AppCompatActivity() {
         b.btnDebloat.setOnClickListener {
             if (!requireShizuku()) return@setOnClickListener
             startActivity(android.content.Intent(this, DebloatActivity::class.java))
+        }
+
+        // Thermal override memakai TOMBOL, bukan switch: statusnya tidak
+        // dipersist (hilang saat reboot), jadi switch akan menampilkan
+        // status palsu. Konfirmasi wajib - ini satu-satunya tweak yang bisa
+        // merusak perangkat bila dipakai sembarangan.
+        b.btnThermalOff.setOnClickListener {
+            if (!requireShizuku()) return@setOnClickListener
+            MaterialAlertDialogBuilder(this)
+                .setTitle("Matikan throttle termal?")
+                .setMessage(
+                    "Sistem tidak akan lagi memperlambat CPU saat panas. " +
+                        "Panas berlebih bisa merusak baterai dan komponen secara " +
+                        "permanen. Aktif sampai reboot atau dipulihkan manual.\n\n" +
+                        "Lanjutkan hanya bila Anda paham risikonya."
+                )
+                .setPositiveButton("Saya paham, matikan") { _, _ ->
+                    applyQuick("throttle termal") { Tweaks.setThermalOverride(true) }
+                }
+                .setNegativeButton("Batal", null)
+                .show()
+        }
+        b.btnThermalOn.setOnClickListener {
+            if (!requireShizuku()) return@setOnClickListener
+            applyQuick("throttle termal") { Tweaks.setThermalOverride(false) }
         }
     }
 

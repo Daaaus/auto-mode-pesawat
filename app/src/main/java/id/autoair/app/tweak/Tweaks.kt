@@ -197,6 +197,55 @@ object Tweaks {
     }
 
     /**
+     * Mode performa tetap (sustained performance mode) - padanan hidden API
+     * PowerManager.setFixedPerformanceModeEnabled, dijangkau lewat shell.
+     * Meminta sistem menahan clock tetap tinggi; efektifnya tergantung
+     * power-HAL perangkat (di sebagian perangkat efeknya kecil/nihil).
+     * In-memory: hilang setiap reboot.
+     */
+    fun setFixedPerformanceMode(on: Boolean): Boolean {
+        val r = ShizukuBridge.exec("cmd power set-fixed-performance-mode-enabled $on")
+        if (r.ok) Logger.info("mode performa tetap: ${if (on) "aktif" else "mati"}")
+        else Logger.error("gagal mengatur mode performa: ${r.output.take(200)}")
+        return r.ok
+    }
+
+    /**
+     * Adaptive battery adalah sumber pembatasan latar adaptif (app standby
+     * bucket, dst). Mematikannya membuat aplikasi latar lebih bebas - responsif,
+     * tapi lebih boros daya.
+     */
+    fun setAdaptiveBatteryOff(off: Boolean): Boolean {
+        val v = if (off) "0" else "1"
+        val ok = ShizukuBridge.exec(
+            "settings put global adaptive_battery_management_enabled $v"
+        ).ok
+        if (ok) Logger.info("adaptive battery: ${if (off) "mati" else "aktif (standar)"}")
+        else Logger.error("gagal mengatur adaptive battery")
+        return ok
+    }
+
+    /**
+     * Override status termal ke NONE (0): sistem berhenti melakukan throttling
+     * karena panas. INI BERBAHAYA - perlindungan panas ada untuk mencegah
+     * kerusakan baterai/komponen. Sengaja:
+     *  - tidak dipersist dan tidak diterapkan ulang saat boot (aktif sampai
+     *    reboot atau dimatikan manual)
+     *  - reset lewat `cmd thermalservice reset`, bukan menulis status lain
+     */
+    fun setThermalOverride(off: Boolean): Boolean {
+        val cmd = if (off) "cmd thermalservice override-status 0" else "cmd thermalservice reset"
+        val r = ShizukuBridge.exec(cmd)
+        if (r.ok) {
+            if (off) Logger.warn("THROTTLE TERMAL DIMATIKAN - awasi suhu perangkat!")
+            else Logger.info("throttle termal kembali normal")
+        } else {
+            Logger.error("gagal mengatur throttle termal: ${r.output.take(200)}")
+        }
+        return r.ok
+    }
+
+    /**
      * Masukkan aplikasi ini ke whitelist doze. Melengkapi pengecualian baterai
      * biasa: saat Doze dalam, whitelist tetap mengizinkan jaringan & partial
      * wake lock, jadi pemantauan tidak ikut tertidur.
@@ -238,6 +287,15 @@ object Tweaks {
         if (config.tweakLockRefreshRate && config.tweakLockRefreshRateHz > 0f) {
             if (setLockRefreshRate(true, config.tweakLockRefreshRateHz)) applied++
         }
+        if (config.tweakFixedPerfMode) {
+            if (setFixedPerformanceMode(true)) applied++
+        }
+        if (config.tweakAdaptiveBatteryOff) {
+            if (setAdaptiveBatteryOff(true)) applied++
+        }
+        // CATATAN: override termal SENGAJA tidak diterapkan ulang di sini.
+        // Itu tweak berbahaya; bila perangkat kepanasan lalu reboot, throttle
+        // harus kembali normal - bukan otomatis dimatikan lagi.
         if (applied > 0) Logger.info("tweak optimasi diterapkan ulang ($applied)")
         return true
     }
