@@ -3,6 +3,7 @@ package id.autoair.app.monitor
 import android.content.Context
 import id.autoair.app.config.ConfigStore
 import id.autoair.app.shizuku.ShizukuBridge
+import id.autoair.app.tweak.Tweaks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
@@ -35,6 +36,7 @@ class MonitorEngine(
 
     private var radiosApplied = false
     private var recoveryChecked = false
+    private var tweaksApplied = false
 
     /**
      * Kanal pembangun loop. Tanpa ini, hilangnya internet tepat setelah satu
@@ -154,6 +156,12 @@ class MonitorEngine(
             if (!recoveryChecked) {
                 recoveryChecked = true
                 recoverStuckAirplaneMode()
+            }
+
+            // Terapkan ulang tweak optimasi yang aktif. Settings.Global umumnya
+            // bertahan setelah reboot, tapi ada ROM yang meresetnya.
+            if (!tweaksApplied) {
+                tweaksApplied = Tweaks.applyPersistent(config)
             }
 
             runCycle()

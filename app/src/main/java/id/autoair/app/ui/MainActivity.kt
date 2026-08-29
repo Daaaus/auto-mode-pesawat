@@ -85,6 +85,10 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
 
+        b.btnTweaks.setOnClickListener {
+            startActivity(Intent(this, TweaksActivity::class.java))
+        }
+
         b.btnShizuku.setOnClickListener {
             when {
                 !ShizukuBridge.isAvailable() -> showShizukuHelp()

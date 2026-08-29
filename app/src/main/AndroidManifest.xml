@@ -16,6 +16,11 @@
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <!-- Diperlukan agar label & ikon aplikasi lain bisa dibaca saat memindai
+         bloatware (API 30+). Distribusi lewat GitHub, bukan Play Store. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
 
     <application
         android:allowBackup="true"
@@ -38,6 +43,16 @@
             android:name=".ui.SettingsActivity"
             android:exported="false"
             android:parentActivityName=".ui.MainActivity" />
+
+        <activity
+            android:name=".ui.TweaksActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity" />
+
+        <activity
+            android:name=".ui.DebloatActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.TweaksActivity" />
 
         <service
             android:name=".service.NetMonitorService"

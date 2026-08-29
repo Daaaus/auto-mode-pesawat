@@ -48,6 +48,15 @@
                 tools:text="v1.6" />
 
             <ImageButton
+                android:id="@+id/btnTweaks"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Optimasi"
+                android:src="@drawable/ic_tweaks" />
+
+            <ImageButton
                 android:id="@+id/btnSettings"
                 android:layout_width="40dp"
                 android:layout_height="40dp"

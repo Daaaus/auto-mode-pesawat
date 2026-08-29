@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Tiga slider horizontal, gaya garis sesuai ikon pengaturan -->
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M4,7 L14,7" />
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M18,7 L20,7" />
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M4,12 L8,12" />
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M12,12 L20,12" />
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M4,17 L16,17" />
+    <path
+        android:strokeColor="@color/text_secondary"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M18,17 L20,17" />
+    <!-- knob -->
+    <path
+        android:strokeColor="@color/accent"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M16,5.6 L16,8.4" />
+    <path
+        android:strokeColor="@color/accent"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M10,10.6 L10,13.4" />
+    <path
+        android:strokeColor="@color/accent"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M17,15.6 L17,18.4" />
+</vector>

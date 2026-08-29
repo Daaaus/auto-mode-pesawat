@@ -153,6 +153,35 @@ class ConfigStore(context: Context) {
             prefs.edit().putBoolean(KEY_DATA_KICK, v).commit()
         }
 
+    // ------------------------------------------------------------------ tweaks
+    // Preferensi untuk fitur Optimasi. Prinsipnya: nilai true berarti "tweak
+    // sedang aktif", dan hanya nilai aktif yang diterapkan ulang saat boot -
+    // supaya kita tidak menimpa setelan manual pengguna dengan nilai default.
+
+    /** animasi UI dipercepat (skala 0.5x). false = standar (1.0x) */
+    var tweakFastAnim: Boolean
+        get() = prefs.getBoolean(KEY_TWEAK_ANIM, false)
+        set(v) = prefs.edit().putBoolean(KEY_TWEAK_ANIM, v).apply()
+
+    /**
+     * Batas proses latar belakang. -1 = standar sistem (tidak dikelola).
+     * Nilai lain: 16 / 8 / 4. Angka kecil menghemat RAM tapi notifikasi
+     * aplikasi bisa tertunda.
+     */
+    var tweakBgProcessLimit: Int
+        get() = prefs.getInt(KEY_TWEAK_BG_LIMIT, -1)
+        set(v) = prefs.edit().putInt(KEY_TWEAK_BG_LIMIT, v).apply()
+
+    /** paksa freezer aplikasi cache aktif (Android 11+) */
+    var tweakFreezerOn: Boolean
+        get() = prefs.getBoolean(KEY_TWEAK_FREEZER, false)
+        set(v) = prefs.edit().putBoolean(KEY_TWEAK_FREEZER, v).apply()
+
+    /** matikan throttle pemindaian WiFi (pemindaian lebih agresif) */
+    var tweakWifiScanThrottleOff: Boolean
+        get() = prefs.getBoolean(KEY_TWEAK_WIFI_SCAN, false)
+        set(v) = prefs.edit().putBoolean(KEY_TWEAK_WIFI_SCAN, v).apply()
+
     /** total refresh sejak dipasang, untuk ditampilkan di UI */
     var totalRefresh: Int
         get() = prefs.getInt(KEY_TOTAL_REFRESH, 0)
@@ -197,5 +226,9 @@ class ConfigStore(context: Context) {
         private const val KEY_TOGGLE_PROGRESS = "toggle_in_progress"
         private const val KEY_DATA_KICK = "data_kick_in_progress"
         private const val KEY_TOTAL_REFRESH = "total_refresh"
+        private const val KEY_TWEAK_ANIM = "tweak_fast_anim"
+        private const val KEY_TWEAK_BG_LIMIT = "tweak_bg_process_limit"
+        private const val KEY_TWEAK_FREEZER = "tweak_freezer"
+        private const val KEY_TWEAK_WIFI_SCAN = "tweak_wifi_scan_throttle_off"
     }
 }

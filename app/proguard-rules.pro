@@ -31,6 +31,8 @@
 -keep class id.autoair.app.service.BootReceiver
 -keep class id.autoair.app.ui.MainActivity
 -keep class id.autoair.app.ui.SettingsActivity
+-keep class id.autoair.app.ui.TweaksActivity
+-keep class id.autoair.app.ui.DebloatActivity
 
 # Custom view dirujuk dari layout XML lewat nama lengkap; jangan direname.
 -keep class id.autoair.app.ui.StatusPulseView { *; }
