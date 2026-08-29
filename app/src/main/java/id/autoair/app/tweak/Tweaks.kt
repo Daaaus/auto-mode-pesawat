@@ -156,14 +156,17 @@ object Tweaks {
     }
 
     /**
-     * Paksa refresh rate maksimal selalu aktif.
+     * Kunci layar ke satu refresh rate.
      *
      * Min DAN peak harus dipatok ke nilai yang sama: menaikkan peak saja tidak
-     * mengubah apa-apa karena sistem tetap bebas memilih mode rendah. Mematikan
-     * tweak = menghapus kedua kunci (bukan menulis 60), supaya perangkat
-     * kembali ke perilaku adaptif bawaannya persis seperti semula.
+     * mengubah apa-apa karena sistem tetap bebas memilih mode lain. Nilainya
+     * bebas di antara mode yang didukung layar - Hz tertinggi untuk paling
+     * mulus, 60 Hz untuk paling hemat baterai.
+     *
+     * Mematikan tweak = menghapus kedua kunci (bukan menulis 60), supaya
+     * perangkat kembali ke perilaku adaptif bawaannya persis seperti semula.
      */
-    fun setMaxRefreshRate(on: Boolean, hz: Float): Boolean {
+    fun setLockRefreshRate(on: Boolean, hz: Float): Boolean {
         val ok = if (on) {
             if (hz <= 0f) {
                 Logger.error("refresh rate tidak diatur: nilai Hz tidak valid")
@@ -178,7 +181,7 @@ object Tweaks {
         }
         if (ok) {
             Logger.info(
-                if (on) "refresh rate dipatok ke ${hz.toInt()} Hz (selalu)"
+                if (on) "refresh rate dikunci ke ${hz.toInt()} Hz"
                 else "refresh rate kembali adaptif"
             )
         } else Logger.error("gagal mengatur refresh rate")
@@ -232,8 +235,8 @@ object Tweaks {
         if (config.tweakWifiScanThrottleOff) {
             if (setWifiScanThrottleOff(true)) applied++
         }
-        if (config.tweakMaxRefreshRate && config.tweakMaxRefreshRateHz > 0f) {
-            if (setMaxRefreshRate(true, config.tweakMaxRefreshRateHz)) applied++
+        if (config.tweakLockRefreshRate && config.tweakLockRefreshRateHz > 0f) {
+            if (setLockRefreshRate(true, config.tweakLockRefreshRateHz)) applied++
         }
         if (applied > 0) Logger.info("tweak optimasi diterapkan ulang ($applied)")
         return true

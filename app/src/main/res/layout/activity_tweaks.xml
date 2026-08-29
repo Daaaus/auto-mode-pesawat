@@ -240,20 +240,20 @@
                     android:textSize="12sp" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchMaxRefresh"
+                    android:id="@+id/switchLockRefresh"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:minHeight="44dp"
-                    android:text="Refresh rate maksimal selalu"
+                    android:text="Kunci refresh rate"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp" />
 
                 <TextView
-                    android:id="@+id/tvMaxRefreshNote"
+                    android:id="@+id/tvLockRefreshNote"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Patok layar ke Hz tertinggi yang didukung (terdeteksi otomatis). Gerakan lebih mulus, baterai lebih boros."
+                    android:text="Patok layar ke satu refresh rate pilihan. Hz tinggi = lebih mulus tapi boros; 60 Hz = paling hemat baterai."
                     android:textColor="@color/text_tertiary"
                     android:textSize="12sp" />
 

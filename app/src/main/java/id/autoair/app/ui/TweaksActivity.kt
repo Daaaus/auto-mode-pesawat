@@ -128,11 +128,11 @@ class TweaksActivity : AppCompatActivity() {
         b.switchFastAnim.isChecked = config.tweakFastAnim
         b.switchFreezer.isChecked = config.tweakFreezerOn
         b.switchWifiScan.isChecked = config.tweakWifiScanThrottleOff
-        b.switchMaxRefresh.isChecked = config.tweakMaxRefreshRate
-        if (config.tweakMaxRefreshRateHz > 0f) {
-            b.tvMaxRefreshNote.text =
-                "Terdeteksi maksimal ${config.tweakMaxRefreshRateHz.toInt()} Hz. " +
-                    "Aktif = layar selalu di Hz ini; lebih mulus, lebih boros baterai."
+        b.switchLockRefresh.isChecked = config.tweakLockRefreshRate
+        if (config.tweakLockRefreshRateHz > 0f) {
+            b.tvLockRefreshNote.text =
+                "Terkunci di ${config.tweakLockRefreshRateHz.toInt()} Hz. " +
+                    "Matikan lalu nyalakan lagi untuk memilih Hz lain."
         }
         b.spinBgLimit.setSelection(
             bgLimits.indexOfFirst { it.second == config.tweakBgProcessLimit }.coerceAtLeast(0)
@@ -177,26 +177,13 @@ class TweaksActivity : AppCompatActivity() {
             applyQuick("scan WiFi") { Tweaks.setWifiScanThrottleOff(on) }
         }
 
-        b.switchMaxRefresh.setOnCheckedChangeListener { _, on ->
-            if (!requireShizukuOrRevert(b.switchMaxRefresh, on)) return@setOnCheckedChangeListener
+        b.switchLockRefresh.setOnCheckedChangeListener { _, on ->
+            if (!requireShizukuOrRevert(b.switchLockRefresh, on)) return@setOnCheckedChangeListener
             if (on) {
-                val hz = detectMaxRefreshRateHz()
-                if (hz == null) {
-                    toast("Layar ini maksimal 60 Hz - tweak tidak berguna")
-                    revertSwitch(b.switchMaxRefresh, attempted = true)
-                    return@setOnCheckedChangeListener
-                }
-                config.tweakMaxRefreshRateHz = hz
-                config.tweakMaxRefreshRate = true
-                b.tvMaxRefreshNote.text =
-                    "Terdeteksi maksimal ${hz.toInt()} Hz. " +
-                        "Aktif = layar selalu di Hz ini; lebih mulus, lebih boros baterai."
-                applyQuick("refresh rate ${hz.toInt()} Hz") {
-                    Tweaks.setMaxRefreshRate(true, hz)
-                }
+                chooseRefreshRate()
             } else {
-                config.tweakMaxRefreshRate = false
-                applyQuick("refresh rate adaptif") { Tweaks.setMaxRefreshRate(false, 0f) }
+                config.tweakLockRefreshRate = false
+                applyQuick("refresh rate adaptif") { Tweaks.setLockRefreshRate(false, 0f) }
             }
         }
 
@@ -249,10 +236,53 @@ class TweaksActivity : AppCompatActivity() {
         setupPerformanceSection()
     }
 
-    /** Hz tertinggi yang didukung layar; null bila perangkat hanya 60 Hz. */
-    private fun detectMaxRefreshRateHz(): Float? {
-        val modes = display?.supportedModes ?: return null
-        return modes.maxOfOrNull { it.refreshRate }?.takeIf { it > 60f }
+    /** Semua refresh rate unik yang didukung layar, diurut menurun. */
+    private fun supportedRefreshRates(): List<Float> {
+        val modes = display?.supportedModes ?: return emptyList()
+        return modes.map { it.refreshRate }.distinct().sortedDescending()
+    }
+
+    /**
+     * Saat switch kunci refresh dinyalakan, pengguna memilih Hz dari mode yang
+     * benar-benar didukung layar. Mengunci ke 60 di layar 120 Hz adalah tweak
+     * hemat baterai yang sah, jadi tidak ada nilai yang "tidak berguna" - satu-
+     * satunya kasus yang ditolak adalah layar tanpa pilihan mode sama sekali.
+     */
+    private fun chooseRefreshRate() {
+        val rates = supportedRefreshRates()
+        if (rates.size < 2) {
+            toast("Layar ini tidak punya mode refresh lain untuk dikunci")
+            revertSwitch(b.switchLockRefresh, attempted = true)
+            return
+        }
+        val max = rates.first()
+        val min = rates.last()
+        val items = rates.map { hz ->
+            buildString {
+                append("${hz.toInt()} Hz")
+                if (hz == max) append(" - paling mulus")
+                if (hz == min && min != max) append(" - paling hemat")
+            }
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Kunci ke refresh rate")
+            .setItems(items) { _, which ->
+                val hz = rates[which]
+                config.tweakLockRefreshRateHz = hz
+                config.tweakLockRefreshRate = true
+                b.tvLockRefreshNote.text =
+                    "Terkunci di ${hz.toInt()} Hz. " +
+                        "Matikan lalu nyalakan lagi untuk memilih Hz lain."
+                applyQuick("refresh rate ${hz.toInt()} Hz") {
+                    Tweaks.setLockRefreshRate(true, hz)
+                }
+            }
+            .setOnCancelListener {
+                // Pengguna batal memilih: switch tidak boleh tertinggal ON.
+                revertSwitch(b.switchLockRefresh, attempted = true)
+            }
+            .show()
     }
 
     private fun revertSpinnerToConfig() {

@@ -182,19 +182,18 @@ class ConfigStore(context: Context) {
         get() = prefs.getBoolean(KEY_TWEAK_WIFI_SCAN, false)
         set(v) = prefs.edit().putBoolean(KEY_TWEAK_WIFI_SCAN, v).apply()
 
-    /** paksa layar selalu di refresh rate maksimal */
-    var tweakMaxRefreshRate: Boolean
-        get() = prefs.getBoolean(KEY_TWEAK_MAX_RR, false)
-        set(v) = prefs.edit().putBoolean(KEY_TWEAK_MAX_RR, v).apply()
+    /** kunci layar ke satu refresh rate (mis. 120 untuk mulus, 60 untuk hemat) */
+    var tweakLockRefreshRate: Boolean
+        get() = prefs.getBoolean(KEY_TWEAK_LOCK_RR, false)
+        set(v) = prefs.edit().putBoolean(KEY_TWEAK_LOCK_RR, v).apply()
 
     /**
-     * Hz maksimum yang didukung layar, dideteksi dari mode layar saat tweak
-     * diaktifkan. Disimpan supaya bisa diterapkan ulang dari service (yang
-     * tidak punya akses mudah ke Display).
+     * Hz yang dipilih pengguna saat tweak diaktifkan. Disimpan supaya bisa
+     * diterapkan ulang dari service (yang tidak punya akses mudah ke Display).
      */
-    var tweakMaxRefreshRateHz: Float
-        get() = prefs.getFloat(KEY_TWEAK_MAX_RR_HZ, 0f)
-        set(v) = prefs.edit().putFloat(KEY_TWEAK_MAX_RR_HZ, v).apply()
+    var tweakLockRefreshRateHz: Float
+        get() = prefs.getFloat(KEY_TWEAK_LOCK_RR_HZ, 0f)
+        set(v) = prefs.edit().putFloat(KEY_TWEAK_LOCK_RR_HZ, v).apply()
 
     /** total refresh sejak dipasang, untuk ditampilkan di UI */
     var totalRefresh: Int
@@ -244,7 +243,7 @@ class ConfigStore(context: Context) {
         private const val KEY_TWEAK_BG_LIMIT = "tweak_bg_process_limit"
         private const val KEY_TWEAK_FREEZER = "tweak_freezer"
         private const val KEY_TWEAK_WIFI_SCAN = "tweak_wifi_scan_throttle_off"
-        private const val KEY_TWEAK_MAX_RR = "tweak_max_refresh_rate"
-        private const val KEY_TWEAK_MAX_RR_HZ = "tweak_max_refresh_rate_hz"
+        private const val KEY_TWEAK_LOCK_RR = "tweak_lock_refresh_rate"
+        private const val KEY_TWEAK_LOCK_RR_HZ = "tweak_lock_refresh_rate_hz"
     }
 }
