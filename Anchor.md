@@ -8,7 +8,7 @@ Aplikasi Android yang menyalakan-mematikan **mode pesawat otomatis saat internet
 
 - Package: `id.autoair.app` · Kotlin · minSdk 30 · target/compile 35 · ViewBinding
 - Repo publik: https://github.com/Daaaus/auto-mode-pesawat
-- Hosting APK (VPS): `https://cmadun65-ccce303e-9878-vm.azure.gensparkclaw.com/apk/AutoModePesawat.apk?v=4` (v1.13)
+- Hosting APK (VPS): `https://cmadun65-ccce303e-9878-vm.azure.gensparkclaw.com/apk/AutoModePesawat.apk?v=5` (v1.13.1)
 
 ## Status sekarang
 
