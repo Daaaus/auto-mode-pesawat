@@ -12,7 +12,7 @@ Aplikasi Android yang menyalakan-mematikan **mode pesawat otomatis saat internet
 
 ## Status sekarang
 
-- **v1.13.0 released & verified.** R8 minify, 10MB → 2.1MB. CI/CD hijau.
+- **v1.13.1 released & verified.** Tanpa rem: full speed selamanya selama internet mati. CI/CD hijau.
 - Kedua workflow ✅ (build run 33204105340, release run 33204159684).
 - APK rilis ditandatangani **release key** (bukan debug), refleksi Shizuku utuh pasca-R8.
 - **Belum dites di HP fisik.** Signature beda dari v1.4 → harus uninstall dulu.
@@ -129,4 +129,4 @@ AGP 8.5.2 · Kotlin 2.0.21 · Gradle 8.7 · `material:1.12.0` · `shizuku:api:13
 pulse, log terminal berwarna), ikon launcher baru, pengaturan dipindah ke layar
 khusus di balik ikon gear, auto-scroll log hanya saat di dasar, interval min 5 dtk.
 
-Berikutnya: tes di HP fisik. (APK di VPS sudah diperbarui ke v1.13 — AutoModePesawat.apk + AutoModePesawat-v1.13.apk)
+Berikutnya: tes di HP fisik. (APK di VPS sudah v1.13.1)
