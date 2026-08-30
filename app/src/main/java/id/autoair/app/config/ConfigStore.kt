@@ -220,16 +220,16 @@ class ConfigStore(context: Context) {
         set(v) = prefs.edit().putString(KEY_ORIG_RADIOS, v).apply()
 
     companion object {
-        // ---- Profil cepat (v1.8) ----------------------------------------------
+        // ---- Profil instan (v1.13) ---------------------------------------------
         // Naikkan SPEED_REV bila default di bawah diubah lagi, supaya instalasi
         // lama ikut termigrasi.
-        private const val SPEED_REV = 2
-        const val DEF_TIMEOUT = 3          // 10 -> 3 detik
-        const val DEF_COOLDOWN = 3         // 15 -> 3 detik
-        const val DEF_HOLD = 2             // 3  -> 2 detik
-        const val DEF_MAX_RETRY = 2        // 3  -> 2 percobaan
-        const val DEF_RETRY_GAP_MS = 400   // 2000 -> 400 ms
-        const val DEF_UNHEALTHY_INTERVAL = 8   // cek tiap 8 dtk selama internet mati
+        private const val SPEED_REV = 3
+        const val DEF_TIMEOUT = 2          // 3 -> 2 detik
+        const val DEF_COOLDOWN = 1         // 3 -> 1 detik
+        const val DEF_HOLD = 1             // 2 -> 1 detik (minimum yang diizinkan)
+        const val DEF_MAX_RETRY = 1        // 2 -> 1 percobaan: gagal sekali = langsung toggle
+        const val DEF_RETRY_GAP_MS = 200   // 400 -> 200 ms (tak terpakai saat maxRetry=1)
+        const val DEF_UNHEALTHY_INTERVAL = 4   // 8 -> 4 dtk selama internet mati
 
         private const val KEY_ENABLED = "enabled"
         private const val KEY_INTERVAL = "interval"

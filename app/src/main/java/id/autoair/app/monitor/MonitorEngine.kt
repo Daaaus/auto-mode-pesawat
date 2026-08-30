@@ -114,7 +114,7 @@ class MonitorEngine(
             consecutiveFailures >= 8 -> base + 4
             consecutiveFailures >= 4 -> base + 2
             else -> base
-        }.coerceAtMost(15)
+        }.coerceAtMost(15).coerceAtLeast(1)
     }
 
     suspend fun run(scope: CoroutineScope) {
@@ -325,7 +325,9 @@ class MonitorEngine(
         // Bila setelah beberapa kali toggle koneksi tetap tidak pulih, radio
         // kemungkinan nyangkut di sel yang sama. Kick data seluler memaksa
         // attach ulang - lebih keras daripada sekadar toggle mode pesawat.
-        if (config.aggressive && consecutiveFailures >= 3) {
+        // Ambang 2 (bukan 3): dengan profil instan tiap kegagalan sudah
+        // berharga, menunggu satu kegagalan lagi hanya menunda pemulihan.
+        if (config.aggressive && consecutiveFailures >= 2) {
             airplane.kickMobileData()
         }
 
@@ -361,7 +363,7 @@ class MonitorEngine(
         config.airplaneToggleInProgress = false
     }
 
-    private suspend fun awaitDataReady(timeoutMs: Long = 20000) {
+    private suspend fun awaitDataReady(timeoutMs: Long = 15000) {
         val t0 = System.currentTimeMillis()
         val deadline = t0 + timeoutMs
         while (System.currentTimeMillis() < deadline) {
@@ -372,7 +374,7 @@ class MonitorEngine(
                 )
                 return
             }
-            delay(150)
+            delay(100)
         }
         Logger.warn("data belum tersambung setelah ${timeoutMs / 1000}s")
     }
@@ -405,10 +407,18 @@ class MonitorEngine(
         MonitorState.update(block)
 
     companion object {
-        /** Jangan bangun tepat setelah refresh: radio memang baru saja diputus. */
-        private const val MIN_GAP_AFTER_REFRESH_MS = 8000L
+        /**
+         * Jangan bangun tepat setelah refresh: radio memang baru saja diputus.
+         * Dipendekkan dari 8s: siklus instan (hold 1s + cooldown 1s) sudah
+         * selesai jauh sebelum ini, dan toggle pasca-refresh selalu memicu
+         * onLost — jeda panjang hanya menunda reaksi terhadap gangguan nyata.
+         */
+        private const val MIN_GAP_AFTER_REFRESH_MS = 2500L
 
-        /** Batasi frekuensi pembangun agar badai event jaringan tidak jadi loop rapat. */
-        private const val WAKE_THROTTLE_MS = 3000L
+        /**
+         * Batasi frekuensi pembangun agar badai event jaringan tidak jadi loop
+         * rapat. 1.5s cukup meredam burst event tanpa menahan siklus perbaikan.
+         */
+        private const val WAKE_THROTTLE_MS = 1500L
     }
 }
