@@ -1,5 +1,6 @@
 package id.autoair.app.tweak
 
+import android.os.Build
 import id.autoair.app.config.ConfigStore
 import id.autoair.app.monitor.Logger
 import id.autoair.app.shizuku.ShizukuBridge
@@ -20,36 +21,54 @@ object Tweaks {
 
     /**
      * Mode kompilasi ART (sesuai `cmd package compile -m`).
-     * Urutan dipakai juga untuk spinner di UI.
+     *
+     * Sejak Android 8 HANYA ada empat compiler filter yang didukung resmi:
+     * verify, quicken, speed, speed-profile (dok AOSP "Configure ART").
+     * Filter lama seperti `everything` bukan filter resmi - di sebagian ROM
+     * ditolak - jadi tidak ditawarkan. `quicken` hanya resmi sampai Android 11
+     * (API 30), jadi disaring menurut versi perangkat.
+     *
+     * Fakta penting dari dokumentasi JIT AOSP: JIT hanya aktif untuk aplikasi
+     * yang TIDAK dikompilasi dengan filter `speed`. Jadi `speed` = JIT efektif
+     * mati untuk aplikasi itu; `verify` = kebalikannya (tanpa AOT sama sekali,
+     * kode berjalan via interpreter + JIT).
      */
-    val COMPILE_MODES = listOf(
-        // mode, label UI, catatan jujur
-        Triple(
-            "speed-profile",
-            "speed-profile (bawaan Android)",
-            "AOT hanya untuk kode yang sering dipakai, sisanya JIT. " +
-                "Paling seimbang - inilah yang dilakukan Android tiap malam saat ngecas."
-        ),
-        Triple(
-            "speed",
-            "speed (AOT penuh)",
-            "Semua kode dikompilasi di depan: aplikasi terasa paling responsif " +
-                "dan JIT nyaris tidak bekerja. Bayarannya: ukuran aplikasi di " +
-                "penyimpanan bisa 2-3x lebih besar."
-        ),
-        Triple(
-            "everything",
-            "everything (maksimal)",
-            "Seperti speed tapi lebih agresif lagi. Hampir tidak ada bedanya di " +
-                "pemakai nyata, penyimpanan paling boros."
-        ),
-        Triple(
-            "quicken",
-            "quicken (hemat)",
-            "Kompilasi minimal, mengandalkan JIT. Dipakai untuk mengembalikan " +
-                "aplikasi bila penyimpanan penuh setelah mode speed/everything."
-        ),
-    )
+    fun compileModes(): List<Triple<String, String, String>> {
+        val modes = mutableListOf(
+            // mode, label UI, catatan jujur
+            Triple(
+                "speed-profile",
+                "speed-profile (bawaan Android)",
+                "AOT hanya untuk method yang terekam di profil JIT (profil terkumpul " +
+                    "otomatis saat aplikasi dipakai). Tanpa profil, hampir tidak ada " +
+                    "yang dikompilasi - itu normal, bukan gagal."
+            ),
+            Triple(
+                "speed",
+                "speed (AOT penuh, JIT mati)",
+                "Semua method dikompilasi di depan dan JIT resmi dinonaktifkan untuk " +
+                    "aplikasi tersebut. Paling responsif. Bayarannya: ukuran aplikasi " +
+                    "di penyimpanan bisa 2-3x lebih besar."
+            ),
+            Triple(
+                "verify",
+                "verify (hapus semua kompilasi)",
+                "Hanya verifikasi tanpa kompilasi AOT: menghapus SEMUA kode hasil " +
+                    "compile, kode kembali jalan via interpreter + JIT. Cara resmi " +
+                    "Android 14+ mengosongkan dalvik-cache aplikasi. Hemat penyimpanan."
+            ),
+        )
+        // quicken resmi hanya sampai Android 11; di 12+ ditolak sebagian ROM.
+        if (Build.VERSION.SDK_INT <= 30) {
+            modes += Triple(
+                "quicken",
+                "quicken (hemat, Android 11)",
+                "Optimasi ringan untuk interpreter. Hanya didukung resmi sampai " +
+                    "Android 11, jadi opsi ini tidak muncul di Android yang lebih baru."
+            )
+        }
+        return modes
+    }
 
     // ------------------------------------------------------------- kompilasi
 
@@ -92,13 +111,42 @@ object Tweaks {
         return r.ok
     }
 
-    /** Hapus hasil kompilasi paksa, kembali ke perilaku default Android. */
+    /**
+     * Kembalikan aplikasi ke keadaan kompilasi awal (seperti baru dipasang).
+     *
+     * Perilaku resmi BERBEDA antar versi Android (dok JIT AOSP):
+     *  - Android 14+ (API 34): `pm art clear-app-profiles` menghapus profil JIT
+     *    lokal; `pm compile --reset` menghapus kode hasil profil lokal, tapi
+     *    TIDAK menghapus kode dari profil bawaan (.dm) - itu hanya bisa dibersihkan
+     *    lewat mode `verify`.
+     *  - Android 13 ke bawah: `pm compile --reset` sekaligus menghapus profil
+     *    lokal dan kode hasil kompilasinya.
+     */
     fun resetCompilation(allPackages: Boolean, selfPkg: String): Boolean {
         val target = if (allPackages) "-a" else selfPkg
-        val r = ShizukuBridge.exec("cmd package compile --reset $target", timeoutSec = 600)
-        if (r.ok) Logger.info("profil kompilasi dikembalikan ke default")
-        else Logger.error("reset kompilasi gagal: ${r.output.take(300)}")
-        return r.ok
+        var ok = true
+
+        if (Build.VERSION.SDK_INT >= 34) {
+            // `pm art clear-app-profiles` tidak menerima -a di semua versi;
+            // untuk semua aplikasi cukup andalkan compile --reset.
+            if (!allPackages) {
+                val r = ShizukuBridge.exec("pm art clear-app-profiles $target", timeoutSec = 60)
+                if (r.ok) Logger.info("profil JIT lokal dihapus (pm art clear-app-profiles)")
+                else Logger.warn("clear-app-profiles gagal: ${r.output.take(200)}")
+            }
+        }
+
+        val r = ShizukuBridge.exec("pm compile --reset $target", timeoutSec = 600)
+        if (r.ok) {
+            Logger.info("kompilasi dikembalikan ke keadaan awal")
+            if (Build.VERSION.SDK_INT >= 34) {
+                Logger.info("catatan: kode dari profil bawaan (.dm) tetap ada - pakai mode verify untuk membersihkan semuanya")
+            }
+        } else {
+            Logger.error("reset kompilasi gagal: ${r.output.take(300)}")
+            ok = false
+        }
+        return ok
     }
 
     // --------------------------------------------------------------- setelan

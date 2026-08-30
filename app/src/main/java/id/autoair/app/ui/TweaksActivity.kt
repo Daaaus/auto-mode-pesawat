@@ -56,14 +56,17 @@ class TweaksActivity : AppCompatActivity() {
     // ------------------------------------------------------------- kompilasi
 
     private fun setupCompileSection() {
+        // Daftar mode difilter menurut versi Android (mis. quicken hanya API<=30),
+        // jadi selalu ambil dari sumber yang sama.
+        val modes = Tweaks.compileModes()
         b.spinCompileMode.adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
-            Tweaks.COMPILE_MODES.map { it.second }
+            modes.map { it.second }
         )
         b.spinCompileMode.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                b.tvCompileModeNote.text = Tweaks.COMPILE_MODES[pos].third
+                b.tvCompileModeNote.text = modes[pos].third
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {}
@@ -82,7 +85,7 @@ class TweaksActivity : AppCompatActivity() {
     /** Kompilasi semua aplikasi berat dan lama, jadi wajib konfirmasi dulu. */
     private fun confirmCompile() {
         if (!requireShizuku()) return
-        val mode = Tweaks.COMPILE_MODES[b.spinCompileMode.selectedItemPosition].first
+        val mode = Tweaks.compileModes()[b.spinCompileMode.selectedItemPosition].first
         val all = b.switchCompileAll.isChecked
         if (!all) {
             startCompile(mode, false)
@@ -92,8 +95,8 @@ class TweaksActivity : AppCompatActivity() {
             .setTitle("Kompilasi semua aplikasi?")
             .setMessage(
                 "Mode $mode akan diterapkan ke SEMUA aplikasi. Prosesnya bisa " +
-                    "puluhan menit, HP hangat, dan baterai terkuras. Mode speed/" +
-                    "everything juga menambah pemakaian penyimpanan.\n\n" +
+                    "puluhan menit, HP hangat, dan baterai terkuras. Mode speed " +
+                    "juga menambah pemakaian penyimpanan.\n\n" +
                     "Biarkan layar tetap menyala sampai selesai."
             )
             .setPositiveButton("Mulai") { _, _ -> startCompile(mode, true) }
