@@ -35,7 +35,7 @@ tiap interval (default 60d):
 3. **Jangan pernah toggle saat panggilan aktif** (`CallGuard`).
 4. **Fail-closed di probe IP** — kalau IP seluler tak terukur (VPN always-on block), catat & lewati, jangan menebak.
 5. **Anti-terjebak-pesawat** (bug terburuk): siklus toggle dibungkus `NonCancellable` + flag persisten `commit()` + pemulihan saat service start.
-6. **Backoff hemat baterai:** 3 gagal→2m, 5→5m, 10→10m.
+6. **Tanpa rem saat internet mati (v1.13+):** backoff LAMA dihapus - selama tidak sehat, interval 4 dtk + kick data tiap refresh gagal, selamanya. Yang tersisa hanya gerbang wake: MIN_GAP 2.5s, throttle 1.5s.
 7. **`isHotspotActive()` fail-open** (return true bila status tethering tak terbaca) agar tak memicu churn radio.
 8. **Ukuran:** R8 + shrinkResources + ABI split. Verifikasi refleksi Shizuku tetap utuh setelah tiap rilis (lihat bagian Verifikasi).
 
@@ -90,28 +90,33 @@ Signature harus cocok dengan keystore lokal: SHA-256 `35d17681546b8426358fb49179
 - Password keystore: `/root/.autoair_keystore_pass` (mode 600). **Cadangkan di luar VPS** — tanpa ini update tak bisa menimpa versi lama.
 - **Token GitHub `ghp_Fllpv...cpPlv` (user Daaaus) TEREXPOSE di chat.** Scope luas (`admin:org`, `delete_repo`, dll). **WAJIB dicabut** di https://github.com/settings/tokens setelah selesai. Repo sendiri aman (remote sudah dibersihkan).
 
-## Default konfigurasi (`ConfigStore`)
+## Default konfigurasi (`ConfigStore`, profil instan v1.13)
 
-`targetHost=www.gstatic.com` · `intervalSec=60` · `airplaneSecs=3` · `probeAttempts=3` · `probeTimeoutSec=5` · `httpCheckEnabled=false` · `enableIpCheck=false` · `checkTethering=true` · backoff `{3→120, 5→300, 10→600}`
+`intervalSec=60` (sehat) · `unhealthyIntervalSec=4` (bermasalah) · `timeout=2` · `maxRetry=1` (gagal sekali langsung toggle) · `retryGapMs=200` · `hold=1` · `cooldown=1` · `aggressive=true` · migrasi paksa `SPEED_REV=3`
+Tweak (layar Optimasi): anim 0.5x, batas proses latar, freezer, scan WiFi, kunci refresh rate (min+peak), mode performa tetap, adaptive battery off, override termal (TIDAK dipersist), debloat bloatware (proteksi keras).
 
 ## Arsitektur (peta file)
 
 | File | Peran |
 |---|---|
-| `service/NetMonitorService.kt` | foreground service (SPECIAL_USE), pemulihan flag saat start, ACTION_STOP/TEST, notif "Uji/Berhenti" |
-| `monitor/MonitorEngine.kt` | loop utama; NonCancellable; backoff; deteksi ganti IP |
-| `monitor/ConnectivityProbe.kt` | probe 204 ketat, bypass VPN (`bindProcessToNetwork`+`openConnection`), probe IP seluler, validasi host |
-| `monitor/AirplaneModeController.kt` | konfig radios, `cycle()` (settings put global + fallback broadcast) |
-| `monitor/HotspotKeeper.kt` | jaga hotspot tetap hidup |
+| `service/NetMonitorService.kt` | foreground service (SPECIAL_USE), pemulihan flag saat start, NetworkCallback → `engine.requestWake` |
+| `monitor/MonitorEngine.kt` | loop utama; NonCancellable; wake channel; interval tak-sehat 4 dtk tanpa rem; kick data tiap gagal |
+| `monitor/ConnectivityProbe.kt` | probe 204 ketat PARALEL (raceReach), bypass VPN, fast-fail `noValidatedNetwork` |
+| `monitor/AirplaneModeController.kt` | radios, cycle settings+broadcast async, `kickMobileData` (flag `data_kick_in_progress`), poll 60ms |
+| `monitor/HotspotKeeper.kt` | deteksi via NetworkInterface (tanpa shell) |
 | `monitor/CallGuard.kt` | cek panggilan aktif |
 | `monitor/MonitorState.kt` | holder status global (singleton) — service nulis, UI baca |
-| `monitor/Logger.kt` | ring buffer 300 baris + callback `onChanged` |
-| `config/ConfigStore.kt` | SharedPreferences, flag `commit()` |
-| `shizuku/ShizukuBridge.kt` | refleksi `newProcess`, `waitForTimeout`, exec, `isReady()` |
+| `monitor/Logger.kt` | ring buffer + StateFlow untuk log UI |
+| `config/ConfigStore.kt` | SharedPreferences, flag `commit()`, profil instan, pref tweak |
+| `shizuku/ShizukuBridge.kt` | refleksi `newProcess`, `waitForTimeout`, exec/execAsync, `isReady()` |
 | `service/BootReceiver.kt` | restart setelah BOOT_COMPLETED / package replaced |
-| `ui/MainActivity.kt` | **target redesign UI** — status dot, statistik, panel lanjutan, salin log, dialog uji |
-| `res/layout/activity_main.xml` | **target redesign UI** — MaterialCardView |
-| `res/drawable/dot_{green,amber,red,grey}.xml` | indikator status |
+| `tweak/Tweaks.kt` | kompilasi ART (`cmd package compile`), settings performa, applyPersistent saat service start |
+| `tweak/Debloat.kt` | scan bloatware + proteksi keras + disable/uninstall(user0)/restore |
+| `ui/MainActivity.kt` | status hero + pulse, log terminal berwarna, tombol Optimasi (ic_tweaks) + Pengaturan |
+| `ui/SettingsActivity.kt` | semua pengaturan monitor + profil cepat + uji refresh |
+| `ui/TweaksActivity.kt` | layar Optimasi: kompilasi ART, kinerja, whitelist doze, BERBAHAYA (termal), entri debloat |
+| `ui/DebloatActivity.kt` | daftar paket bawaan + aksi massal + pulihkan semua |
+| `ui/StatusPulseView.kt` | custom view cincin berdenyut (ada keep rule R8) |
 
 ## Dependensi
 
