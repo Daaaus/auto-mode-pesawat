@@ -53,14 +53,19 @@ class MonitorEngine(
 
     /**
      * Minta loop bangun lebih awal. Diabaikan bila kita sendiri yang sedang
-     * mematikan radio (toggle kita pasti memicu onLost), atau bila baru saja
-     * refresh / baru saja dibangunkan - supaya tidak jadi loop rapat.
+     * mematikan radio (toggle kita pasti memicu onLost) - selain itu, saat
+     * kondisi sedang TIDAK SEHAT semua gerbang dilewati: gangguan jaringan
+     * apa pun harus langsung diproses, tidak ditahan rem waktu. Gerbang tetap
+     * berlaku saat sehat supaya badai event tidak jadi loop rapat.
      */
     fun requestWake(reason: String) {
         val now = System.currentTimeMillis()
         if (refreshing) return
-        if (now - lastRefreshAt < MIN_GAP_AFTER_REFRESH_MS) return
-        if (now - lastWakeAt < WAKE_THROTTLE_MS) return
+        val unhealthy = MonitorState.state.value.healthy == false
+        if (!unhealthy) {
+            if (now - lastRefreshAt < MIN_GAP_AFTER_REFRESH_MS) return
+            if (now - lastWakeAt < WAKE_THROTTLE_MS) return
+        }
         lastWakeAt = now
         if (wake.trySend(Unit).isSuccess) {
             Logger.info("dibangunkan: $reason")
@@ -82,39 +87,29 @@ class MonitorEngine(
      * justru ketika internet mati kita ingin bereaksi paling cepat. Sekarang
      * selama kondisi bermasalah dipakai interval khusus yang jauh lebih pendek.
      *
-     * Rem tetap ada, tapi hanya untuk kasus ekstrem (operator benar-benar down
-     * puluhan kali berturut-turut) supaya baterai tidak habis sia-sia - dan
-     * batasnya jauh lebih longgar dari sebelumnya.
+     * Tanpa rem sama sekali: permintaan eksplisit pengguna - kalau internet tidak
+     * kunjung balik, aplikasi harus terus mencoba memperbaiki di kecepatan penuh,
+     * seberapa pun lama gangguannya. Baterai jadi tanggung jawab pengguna; yang
+     * membatasi hanya interval tak-sehat itu sendiri (default 4 dtk) yang tetap
+     * bisa diubah di pengaturan.
      */
     private fun currentInterval(): Int {
         val healthy = MonitorState.state.value.healthy
         if (!config.aggressive) return config.intervalSec
-
-        if (healthy == false) {
-            val fast = config.unhealthyIntervalSec
-            // Rem sangat longgar: baru melambat setelah 20 kegagalan berturut.
-            return when {
-                consecutiveFailures >= 40 -> fast * 6
-                consecutiveFailures >= 20 -> fast * 3
-                else -> fast
-            }.coerceAtMost(300)
-        }
+        if (healthy == false) return config.unhealthyIntervalSec
         return config.intervalSec
     }
 
     /**
-     * Lama mode pesawat ditahan. Bila toggle singkat berulang kali tidak
-     * menolong, kemungkinan radio butuh waktu lebih lama untuk benar-benar
-     * lepas dari sel yang bermasalah, jadi durasinya dinaikkan bertahap.
+     * Lama mode pesawat ditahan. Tetap selalu nilai dari pengaturan - tidak
+     * dinaikkan bertahap saat gagal beruntun, karena menahan radio lebih lama
+     * hanya menunda percobaan perbaikan berikutnya (permintaan pengguna:
+     * jangan perlambat apa pun saat internet tidak kunjung balik).
      */
     private fun currentHoldSec(): Int {
         val base = config.airplaneHoldSec
         if (!config.aggressive) return base
-        return when {
-            consecutiveFailures >= 8 -> base + 4
-            consecutiveFailures >= 4 -> base + 2
-            else -> base
-        }.coerceAtMost(15).coerceAtLeast(1)
+        return base.coerceAtLeast(1)
     }
 
     suspend fun run(scope: CoroutineScope) {
@@ -325,9 +320,9 @@ class MonitorEngine(
         // Bila setelah beberapa kali toggle koneksi tetap tidak pulih, radio
         // kemungkinan nyangkut di sel yang sama. Kick data seluler memaksa
         // attach ulang - lebih keras daripada sekadar toggle mode pesawat.
-        // Ambang 2 (bukan 3): dengan profil instan tiap kegagalan sudah
-        // berharga, menunggu satu kegagalan lagi hanya menunda pemulihan.
-        if (config.aggressive && consecutiveFailures >= 2) {
+        // Tanpa ambang: setiap refresh yang gagal pulih langsung dikick,
+        // karena menunggu hanya menunda pemulihan.
+        if (config.aggressive) {
             airplane.kickMobileData()
         }
 

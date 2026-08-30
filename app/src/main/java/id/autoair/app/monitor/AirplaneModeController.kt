@@ -135,14 +135,14 @@ class AirplaneModeController(
         // menyelamatkan pengguna dari kehilangan data seluler permanen.
         config.dataKickInProgress = true
         try {
-            delay(1200)
+            delay(600)
             var on = ShizukuBridge.exec("svc data enable", timeoutSec = 5).ok
             if (!on) {
                 // Sama seperti mode pesawat: meninggalkan data mati jauh lebih
                 // buruk daripada gagal refresh, jadi dicoba beberapa kali.
-                for (i in 1..3) {
-                    Logger.error("gagal menyalakan data, percobaan ulang $i/3")
-                    delay(500)
+                for (i in 1..5) {
+                    Logger.error("gagal menyalakan data, percobaan ulang $i/5")
+                    delay(300)
                     if (ShizukuBridge.exec("svc data enable", timeoutSec = 5).ok) {
                         on = true
                         break
